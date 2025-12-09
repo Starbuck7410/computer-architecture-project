@@ -1,1 +1,6 @@
-#define _CRT_SECURE_NO_WARNINGS
+#include "general_utils.h"
+
+int main(){
+    DEBUG_PRINT("Hello, debug!\n");
+    return 0;
+}

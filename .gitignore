@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# I hate MS Visual Studio, wtf is this gitignore??
+simulator
+
+
 # User-specific files
 *.rsuser
 *.suo

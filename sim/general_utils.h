@@ -1,13 +1,35 @@
 #define _CRT_SECURE_NO_WARNINGS
+#pragma once
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 
+#ifdef DEBUG
+#define DEBUG_PRINT(...) printf(__VA_ARGS__)
+#else
+#define DEBUG_PRINT(...) ;
+#endif
+
 #define IMEM_DEPTH 1024
 #define DSRAM_DEPTH 512 
 #define TSRAM_DEPTH 64
+#define REGISTER_COUNT 16 // R0 to R15
 
+
+typedef enum {
+    MESI_MODIFIED,
+    MESI_EXCLUSIVE,
+    MESI_SHARED,
+    MESI_INVALID
+} MESI_State;
+
+typedef enum {
+    BUS_NOCMD = 0,
+    BUS_RD,
+    BUS_RDX,
+    BUS_FLUSH
+} BusCmd;
 
 // Instruction & Registers
 typedef struct {
@@ -22,7 +44,7 @@ typedef struct {
 } Instruction;
 
 typedef struct {
-    int32_t R[16]; // R0 to R15
+    int32_t regs[REGISTER_COUNT]; 
 } RegisterFile;
 
 // Pipeline
@@ -44,12 +66,12 @@ typedef struct {
 // Memory & Cache
 typedef struct {
     uint32_t tag;   // bits 11:0 
-    uint8_t mesi_state; // 0: Invalid, 1: Shared, 2: Exclusive, 3: Modified
+    MESI_State mesi_state; 
 } TSRAM_Line;
 
 typedef struct {
-    uint32_t DSRAM[DSRAM_DEPTH];     
-    TSRAM_Line TSRAM[TSRAM_DEPTH];   
+    uint32_t dsram[DSRAM_DEPTH];     
+    TSRAM_Line tsram[TSRAM_DEPTH];   
 } Cache;
 
 // Status
@@ -83,7 +105,7 @@ typedef struct {
 //Bus
 typedef struct {
     int bus_origid;      // 3 bits: 0-3 for cores, 4 for Main Memory
-    int bus_cmd;         // 0: No Command, 1: BusRd, 2: BusRdX, 3: Flush 
+    BusCmd bus_cmd;         
     uint32_t bus_addr;   // 21-bit word address 
     uint32_t bus_data;   // 32-bit word data 
     int bus_shared;     // 1 bit
@@ -91,8 +113,6 @@ typedef struct {
     bool busy;               // Is the bus currently processing a transaction
 
 } SystemBus;
-
-
 
 
 // ========== Function Declarations ==========
