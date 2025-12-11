@@ -11,8 +11,9 @@ The Computer Architecture project
 - Design Structs, Enums, and overall architecture of the project
 - Copy and adapt assembler, simuator
 
-Amit - Structs for the cpu\
-Daniel and Zohar - `decode` and `execute`
+Amit - Loads data into relevant structures\
+Daniel and Zohar - `decode` and `execute`\
+Shraga - Write more documentation and signatures for functions
 
 
 ## Code style conventions

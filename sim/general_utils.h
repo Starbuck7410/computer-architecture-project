@@ -18,6 +18,11 @@
 
 
 typedef enum {
+    OP_ADD = 0
+    // Fill later daniel plz
+} Opcode;
+
+typedef enum {
     MESI_MODIFIED,
     MESI_EXCLUSIVE,
     MESI_SHARED,
@@ -35,11 +40,10 @@ typedef enum {
 typedef struct {
     uint32_t binary_value; 
 
-    uint8_t opcode;        // bits 31:24
+    Opcode opcode;        // bits 31:24
     uint8_t rd;            // bits 23:20
     uint8_t rs;            // bits 19:16
     uint8_t rt;            // bits 15:12
-
     int32_t imm;           // bits 11:0, sign-extended
 } Instruction;
 
@@ -51,7 +55,7 @@ typedef struct {
 typedef struct {
     uint32_t pc;            // The PC of the instruction currently in this stage
     Instruction inst;       
-    uint32_t alu_result;    // Result calculated in EXEC
+    uint32_t result;    // Result from the pipeline stage
     bool active;            // true = real instruction, false = bubble/empty
 } PipelineStage;
 
@@ -69,6 +73,9 @@ typedef struct {
     MESI_State mesi_state; 
 } TSRAM_Line;
 
+// TODO: Change cache to be TSRAM_DEPTH blocks long 
+// and each block is a new struct with 4 (BLOCK_SIZE) 
+// words long
 typedef struct {
     uint32_t dsram[DSRAM_DEPTH];     
     TSRAM_Line tsram[TSRAM_DEPTH];   
@@ -104,11 +111,11 @@ typedef struct {
 
 //Bus
 typedef struct {
-    int bus_origid;      // 3 bits: 0-3 for cores, 4 for Main Memory
+    int bus_orig_id;      // 3 bits: 0-3 for cores, 4 for Main Memory
     BusCmd bus_cmd;         
     uint32_t bus_addr;   // 21-bit word address 
     uint32_t bus_data;   // 32-bit word data 
-    int bus_shared;     // 1 bit
+    bool bus_shared; 
     int last_granted_device; // ID of the device that used the bus last cycle
     bool busy;               // Is the bus currently processing a transaction
 
