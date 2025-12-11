@@ -18,8 +18,12 @@ simulator: clean $(SOURCES_SIM)
 simulator-debug: clean $(SOURCES_SIM)
 	@echo Compiling files with debug: $(SOURCE_SIM)
 	@gcc $(DEBUG_FLAGS) -o $(TARGET_SIM) $(SOURCE_SIM)
-
-run: 
 	@./$(TARGET_SIM)
+
+simulator-run: simulator
+	@./$(TARGET_SIM)
+
 clean: 
-	rm $(TARGET_SIM)
+	@rm -f $(TARGET_SIM)
+	
+.PHONY: clean simulator-run
