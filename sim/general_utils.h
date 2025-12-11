@@ -18,7 +18,25 @@
 
 
 typedef enum {
-    OP_ADD = 0
+    OP_ADD = 0,
+    OP_SUB,
+    OP_AND,
+    OP_OR,
+    OP_XOR,
+    OP_MUL,
+    OP_SLL,
+    OP_SRA,
+    OP_SRL,
+    OP_BEQ,
+    OP_BNE,
+    OP_BLT,
+    OP_BGT,
+    OP_BLE,
+    OP_BGE,
+    OP_JAL,
+    OP_LW,
+    OP_SW,
+    OP_HALT = 20
     // Fill later daniel plz
 } Opcode;
 
@@ -55,7 +73,7 @@ typedef struct {
 typedef struct {
     uint32_t pc;            // The PC of the instruction currently in this stage
     Instruction inst;       
-    uint32_t result;    // Result from the pipeline stage
+    int32_t result;        // Result from the pipeline stage
     bool active;            // true = real instruction, false = bubble/empty
 } PipelineStage;
 
