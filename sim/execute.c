@@ -42,6 +42,7 @@ void execute_stage(Core * core){
         case OP_SRL:
             results = (int32_t)((uint32_t)rs_val >> rt_val);
             break;
+        // ----- Branches (move to decode) ----- 
         case OP_BEQ:
             if (rs_val == rt_val) results = addr;
             break;
@@ -60,6 +61,8 @@ void execute_stage(Core * core){
         case OP_BGE:
             if (rs_val >= rt_val) results = addr;
             break;          
+        default:
+            break;
     }
     core->pipe.execute.result = results;
     return;
@@ -70,4 +73,21 @@ void execute_stage(Core * core){
     // This will go in the writeback stage into rd.
     // No return value, modify core as a pointer.
 
+}
+
+void decode_stage(Core * core){
+    // The decode function should handle:
+    // Decoding the instruction (duh):
+    //   It is going to get the instruction in 
+    //   core->pipe.decode.inst, and only the 
+    //   core->pipe.decode.inst.binary_value field
+    //   will be filled. You must make sure to fill the others.
+    // Check for branches:
+    //   Check for branches and update the PC if applicable.
+    // Handle data hazards:
+    //   If there is a hazard, this instruction must pass on a bubble.
+    
+    // Bonus points if you add a debug print for when register 0 will be
+    // written to, because that should not happen in normal code. Please 
+    // use the DEBUG_PRINT() macro if you do...
 }
