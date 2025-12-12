@@ -95,7 +95,7 @@ void decode_stage(Core * core){
     inst->rd = (uint8_t)((binary_raw >> 20) & 0xF);
     inst->rs = (uint8_t)((binary_raw >> 16) & 0xF);
     inst->rt = (uint8_t)((binary_raw >> 12) & 0xF);
-    uint16_t addr = (core->reg_file.regs[core->pipe.execute.inst.rd]) & 0b1111111111; //R[rd][low bits 9:0]
+    uint16_t addr = (core->regs[core->pipe.execute.inst.rd]) & 0b1111111111; //R[rd][low bits 9:0]
 
     // sign-extend 12-bit immediate
     int32_t imm12 = binary_raw & 0xFFF;
@@ -103,8 +103,8 @@ void decode_stage(Core * core){
     inst->imm = imm12;
 
     // Register values
-    int32_t rs_val = core->reg_file.regs[inst->rs];
-    int32_t rt_val = core->reg_file.regs[inst->rt];
+    int32_t rs_val = core->regs[inst->rs];
+    int32_t rt_val = core->regs[inst->rt];
     // rd_val is the register number (0..15)
 
     // Writing to register 0 should not happen in normal code.
@@ -114,10 +114,10 @@ void decode_stage(Core * core){
         return;
     }
 
-// ---------- Data hazard detection ----------
-// If any previous instruction in Execute/Mem/WB will write to a register that this
-// instruction reads (rs or rt), then stall.
-// and keep Decode active (so the instruction stays in decode for the next cycle).
+    // ---------- Data hazard detection ----------
+    // If any previous instruction in Execute/Mem/WB will write to a register that this
+    // instruction reads (rs or rt), then stall.
+    // and keep Decode active (so the instruction stays in decode for the next cycle).
     bool hazard = false;
     PipelineStage* stages_to_check[3] = { &core->pipe.execute, &core->pipe.mem, &core->pipe.wb };
     PipelineStage* s = stages_to_check[0];
@@ -164,7 +164,7 @@ void decode_stage(Core * core){
         break;
     case OP_JAL:
         // Save next PC in R15
-        core->reg_file.regs[15] = core->pc;
+        core->regs[15] = core->pc;
         core->pc = addr;
         break;
 
