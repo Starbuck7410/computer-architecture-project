@@ -127,7 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="pipeline.c" />
+    <ClCompile Include="execute.c" />
     <ClCompile Include="main.c" />
   </ItemGroup>
   <ItemGroup>
