@@ -114,7 +114,7 @@ void write_outputs(SimFiles* files, Core cores[4], uint32_t* main_memory) {
         fp = fopen(files->tsram[i], "w");
         if (fp) {
             // fill in
-            fclose(fp); // FIX: Must be inside the if(fp)
+            fclose(fp);
         }
 
         // stats
