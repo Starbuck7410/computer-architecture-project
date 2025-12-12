@@ -1,4 +1,5 @@
-#include "general_utils.h"
+#include "pipeline.h"
+
 
 
 void execute_stage(Core * core){
@@ -10,10 +11,10 @@ void execute_stage(Core * core){
     if (core->pipe.execute.active == 0) return; //Now check if were halted or bubbled
     // Perform the stage
     Instruction *inst = &core->pipe.execute.inst;
-    int32_t rt_val = core->reg_file.regs[core->pipe.execute.inst.rt];
-    int32_t rs_val = core->reg_file.regs[core->pipe.execute.inst.rs];
+    int32_t rt_val = core->regs[core->pipe.execute.inst.rt];
+    int32_t rs_val = core->regs[core->pipe.execute.inst.rs];
     int32_t results = core->pipe.execute.result;
-    uint16_t addr = (core->reg_file.regs[core->pipe.execute.inst.rd]) & 0b1111111111; //R[rd][low bits 9:0]
+    uint16_t addr = (core->regs[core->pipe.execute.inst.rd]) & 0b1111111111; //R[rd][low bits 9:0]
     switch (inst->opcode) {
         case OP_ADD:
             results = rs_val + rt_val;

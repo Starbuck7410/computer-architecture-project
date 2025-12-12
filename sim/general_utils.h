@@ -13,8 +13,9 @@
 
 #define IMEM_DEPTH 1024
 #define DSRAM_DEPTH 512 
-#define TSRAM_DEPTH 64
+#define CACHE_BLOCK_SIZE 8
 #define REGISTER_COUNT 16 // R0 to R15
+#define TSRAM_DEPTH (DSRAM_DEPTH / CACHE_BLOCK_SIZE)
 
 
 typedef enum {
@@ -65,9 +66,6 @@ typedef struct {
     int32_t imm;           // bits 11:0, sign-extended
 } Instruction;
 
-typedef struct {
-    int32_t regs[REGISTER_COUNT]; 
-} RegisterFile;
 
 // Pipeline
 typedef struct {
@@ -91,11 +89,12 @@ typedef struct {
     MESI_State mesi_state; 
 } TSRAM_Line;
 
-// TODO: Change cache to be TSRAM_DEPTH blocks long 
-// and each block is a new struct with 4 (BLOCK_SIZE) 
-// words long
 typedef struct {
-    uint32_t dsram[DSRAM_DEPTH];     
+    uint32_t word[CACHE_BLOCK_SIZE];
+} DSRAM_Line;
+
+typedef struct {
+    DSRAM_Line dsram[TSRAM_DEPTH];     
     TSRAM_Line tsram[TSRAM_DEPTH];   
 } Cache;
 
@@ -117,7 +116,7 @@ typedef struct {
     int id;                 // 0, 1, 2, 3
     uint32_t pc;            // Current PC
 
-    RegisterFile reg_file;
+    int32_t regs[REGISTER_COUNT]; 
     Pipeline pipe;
     Cache cache;
     CoreStats stats;
