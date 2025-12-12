@@ -12,6 +12,7 @@
 #endif
 
 #define IMEM_DEPTH 1024
+#define MEMIN_DEPTH (1 << 21)
 #define DSRAM_DEPTH 512 
 #define TSRAM_DEPTH 64
 #define REGISTER_COUNT 16 // R0 to R15
