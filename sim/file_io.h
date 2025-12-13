@@ -1,4 +1,5 @@
 #include "general_utils.h"
+#include <stdlib.h>
 
 // File management
 typedef struct {

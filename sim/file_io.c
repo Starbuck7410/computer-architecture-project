@@ -1,6 +1,5 @@
-#include "general_utils.h"
 #include "file_io.h"
-#include <stdlib.h>
+
 
 void get_arguments(int argc, char* argv[], SimFiles* files) {
     // defult
@@ -51,7 +50,9 @@ void get_arguments(int argc, char* argv[], SimFiles* files) {
 // read imem[i] into struct
 void read_imem(SimFiles* files, Core core[4]) {
     FILE* fp;
+
     for (int i = 0;i < 4;i++) {
+        memset(core[i].imem, 0, sizeof(core[i].imem));
         fp = fopen(files->imem[i], "r");
         if (fp) {
             for (int addr = 0; addr < IMEM_DEPTH; addr++) {
@@ -68,6 +69,7 @@ void read_imem(SimFiles* files, Core core[4]) {
 void read_mainmem(SimFiles* files, uint32_t* main_memory) {
     FILE* fp;
 
+    memset(main_memory, 0, MEMIN_DEPTH * sizeof(uint32_t));
     fp = fopen(files->memin, "r");
     if (fp) {
         int addr = 0;
@@ -78,14 +80,18 @@ void read_mainmem(SimFiles* files, uint32_t* main_memory) {
     }
 }
 
-// write outputs files (need to fill cache parts)
+// write outputs files 
 void write_outputs(SimFiles* files, Core cores[4], uint32_t* main_memory) {
     FILE* fp;
 
     // memout
     fp = fopen(files->memout, "w");
+    int max_addr = MEMIN_DEPTH-1;
+    while (max_addr >= 0 && main_memory[max_addr] == 0) {
+        max_addr--;
+    }
     if (fp) {
-        for (int i = 0; i < MEMIN_DEPTH; i++) {
+        for (int i = 0; i <= max_addr; i++) {
             fprintf(fp, "%08X\n", main_memory[i]);
         }
         fclose(fp);
@@ -97,7 +103,7 @@ void write_outputs(SimFiles* files, Core cores[4], uint32_t* main_memory) {
         fp = fopen(files->regout[i], "w");
         if (fp) {
             for (int r = 2; r < REGISTER_COUNT; r++) { // R2 to R15
-                fprintf(fp, "%08X\n", cores[i].reg_file.regs[r]);
+                fprintf(fp, "%08X\n", cores[i].regs[r]);
             }
             fclose(fp);
         }
@@ -105,15 +111,21 @@ void write_outputs(SimFiles* files, Core cores[4], uint32_t* main_memory) {
         // dsram
         fp = fopen(files->dsram[i], "w");
         if (fp) {
-            // fill in
-            
-            fclose(fp); 
+            for (int line = 0; line < TSRAM_DEPTH; line++) {
+                for (int word = 0; word < CACHE_BLOCK_SIZE; word++) {
+                    fprintf(fp, "%08X\n", cores[i].cache.dsram[line].word[word]);
+                }
+            }
+            fclose(fp);
         }
 
         // tsram
         fp = fopen(files->tsram[i], "w");
         if (fp) {
-            // fill in
+            for (int line = 0; line < TSRAM_DEPTH; line++) {
+                uint32_t val = (cores[i].cache.tsram[line].mesi_state << 12) | (cores[i].cache.tsram[line].tag & 0xFFF);
+                fprintf(fp, "%08X\n", val);
+            }
             fclose(fp);
         }
 
