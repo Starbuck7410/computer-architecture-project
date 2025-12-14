@@ -1,6 +1,5 @@
 #include "file_io.h"
 
-
 void get_arguments(int argc, char* argv[], SimFiles* files) {
     // defult
     if (argc < 28) {

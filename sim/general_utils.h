@@ -39,7 +39,6 @@ typedef enum {
     OP_LW,
     OP_SW,
     OP_HALT = 20
-    // Fill later daniel plz
 } Opcode;
 
 typedef enum {

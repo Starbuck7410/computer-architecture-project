@@ -173,3 +173,11 @@ void decode_stage(Core * core){
 
     return;
 }
+
+
+void fetch_stage(Core * core){
+    // This function has to load an instruction into the instruction field
+    // core->pipe.fetch.inst.binary_value
+    // Does this function do anything else?
+    // Like i am genuinely asking here I really do not know
+}

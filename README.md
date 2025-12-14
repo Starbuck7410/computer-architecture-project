@@ -11,8 +11,7 @@ The Computer Architecture project
 - Design Structs, Enums, and overall architecture of the project
 - Copy and adapt assembler, simuator
 
-Amit - Loads data into relevant structures\
-Daniel and Zohar - `decode` and `execute`\
+Amit Daniel and Zohar - You can fight amongst yourselves over who gets to write the fetch function and who makes test files and ensures we can load instructions into all the CPU cores successfully.\
 Shraga - Write more documentation and signatures for functions
 
 

@@ -17,6 +17,6 @@ typedef struct {
 
 // Function Declarations
 void get_arguments(int argc, char* argv[], SimFiles* files);
-void read_imem(SimFiles* files, Core core[4]);
+void read_imem(SimFiles* files, Core core[CORE_COUNT]);
 void read_mainmem(SimFiles* files, uint32_t* main_memory);
-void write_outputs(SimFiles* files, Core cores[4], uint32_t* main_memory);
+void write_outputs(SimFiles* files, Core cores[CORE_COUNT], uint32_t* main_memory);
