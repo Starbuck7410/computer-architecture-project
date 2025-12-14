@@ -14,7 +14,6 @@ void execute_stage(Core * core){
     int32_t rt_val = core->regs[core->pipe.execute.inst.rt];
     int32_t rs_val = core->regs[core->pipe.execute.inst.rs];
     int32_t results = core->pipe.execute.result;
-    uint16_t addr = (core->regs[core->pipe.execute.inst.rd]) & 0b1111111111; //R[rd][low bits 9:0]
     switch (inst->opcode) {
         case OP_ADD:
             results = rs_val + rt_val;
@@ -43,6 +42,8 @@ void execute_stage(Core * core){
         case OP_SRL:
             results = (int32_t)((uint32_t)rs_val >> rt_val);
             break;
+        default:
+            break;
     }
     core->pipe.execute.result = results;
     return;
@@ -63,8 +64,10 @@ static bool opcode_writes_rd(Opcode op) {
     case OP_SLL: case OP_SRA: case OP_SRL:
     case OP_LW:
         return true;
+        break;
     default:
         return false;
+        break;
     }
 }
 
@@ -123,12 +126,10 @@ void decode_stage(Core * core){
     PipelineStage* s = stages_to_check[0];
     for (int i = 0; i < 3 && !hazard; ++i) {
         s = stages_to_check[i];
-        if (s->active) {
-            uint8_t prev_rd = s->inst.rd;
-            if (prev_rd != 0 && opcode_writes_rd(s->inst.opcode)) {
-                if (prev_rd == inst->rs || prev_rd == inst->rt) {
-                    hazard = true;
-                }
+        uint8_t prev_rd = s->inst.rd;
+        if (s->active && prev_rd != 0 && opcode_writes_rd(s->inst.opcode)) {
+            if (prev_rd == inst->rs || prev_rd == inst->rt) {
+                hazard = true;
             }
         }
     }
@@ -139,8 +140,6 @@ void decode_stage(Core * core){
         // Do NOT advance PC here (fetch/decode will be retried next cycle)
         return;
     }
-
-
     switch (inst->opcode) {
     // ----- Branches  ----- 
 

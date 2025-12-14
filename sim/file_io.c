@@ -36,111 +36,114 @@ void get_arguments(int argc, char* argv[], SimFiles* files) {
 
     // from command line
     int idx = 1;
-    for (int i = 0; i < 4; i++) files->imem[i] = argv[idx++];
+    for (int i = 0; i < CORE_COUNT; i++) files->imem[i] = argv[idx++];
     files->memin = argv[idx++];
     files->memout = argv[idx++];
-    for (int i = 0; i < 4; i++) files->regout[i] = argv[idx++];
-    for (int i = 0; i < 4; i++) files->trace[i] = argv[idx++];
+    for (int i = 0; i < CORE_COUNT; i++) files->regout[i] = argv[idx++];
+    for (int i = 0; i < CORE_COUNT; i++) files->trace[i] = argv[idx++];
     files->bustrace = argv[idx++];
-    for (int i = 0; i < 4; i++) files->dsram[i] = argv[idx++];
-    for (int i = 0; i < 4; i++) files->tsram[i] = argv[idx++];
-    for (int i = 0; i < 4; i++) files->stats[i] = argv[idx++];
+    for (int i = 0; i < CORE_COUNT; i++) files->dsram[i] = argv[idx++];
+    for (int i = 0; i < CORE_COUNT; i++) files->tsram[i] = argv[idx++];
+    for (int i = 0; i < CORE_COUNT; i++) files->stats[i] = argv[idx++];
 }
 
 // read imem[i] into struct
-void read_imem(SimFiles* files, Core core[4]) {
-    FILE* fp;
+void read_imem(SimFiles* files, Core core[CORE_COUNT]) {
+    FILE* file;
 
-    for (int i = 0;i < 4;i++) {
+    for (int i = 0; i < CORE_COUNT; i++) {
         memset(core[i].imem, 0, sizeof(core[i].imem));
-        fp = fopen(files->imem[i], "r");
-        if (fp) {
+        file = fopen(files->imem[i], "r");
+        if (file) {
             for (int addr = 0; addr < IMEM_DEPTH; addr++) {
-                if (fscanf(fp, "%08x", &core[i].imem[addr]) == EOF) {
+                if (fscanf(file, "%08x", &core[i].imem[addr]) == EOF) {
                     break;
                 }
             }
-            fclose(fp);
+            fclose(file);
         }
     }
 }
 
 // read main mem (need to define main mem arr)
 void read_mainmem(SimFiles* files, uint32_t* main_memory) {
-    FILE* fp;
+    FILE* file;
 
     memset(main_memory, 0, MEMIN_DEPTH * sizeof(uint32_t));
-    fp = fopen(files->memin, "r");
-    if (fp) {
+    file = fopen(files->memin, "r");
+    if (file) {
         int addr = 0;
-        while (fscanf(fp, "%08x", &main_memory[addr]) != EOF && addr < MEMIN_DEPTH) {
+        while (fscanf(file, "%08x", &main_memory[addr]) != EOF && addr < MEMIN_DEPTH) {
             addr++;
         }
-        fclose(fp);
+        fclose(file);
     }
 }
 
 // write outputs files 
-void write_outputs(SimFiles* files, Core cores[4], uint32_t* main_memory) {
-    FILE* fp;
+void write_outputs(SimFiles* files, Core cores[CORE_COUNT], uint32_t* main_memory) {
+    FILE* file;
 
-    // memout
-    fp = fopen(files->memout, "w");
     int max_addr = MEMIN_DEPTH-1;
     while (max_addr >= 0 && main_memory[max_addr] == 0) {
         max_addr--;
     }
-    if (fp) {
-        for (int i = 0; i <= max_addr; i++) {
-            fprintf(fp, "%08X\n", main_memory[i]);
-        }
-        fclose(fp);
+    
+    // memout
+    file = fopen(files->memout, "w");
+    if (!file) goto file_error;
+    for (int i = 0; i <= max_addr; i++) {
+        fprintf(file, "%08X\n", main_memory[i]);
     }
+    fclose(file);
+    
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < CORE_COUNT; i++) {
 
         // regout
-        fp = fopen(files->regout[i], "w");
-        if (fp) {
-            for (int r = 2; r < REGISTER_COUNT; r++) { // R2 to R15
-                fprintf(fp, "%08X\n", cores[i].regs[r]);
-            }
-            fclose(fp);
+        file = fopen(files->regout[i], "w");
+        if (!file) goto file_error;
+        for (int r = 2; r < REGISTER_COUNT; r++) { // R2 to R15
+            fprintf(file, "%08X\n", cores[i].regs[r]);
         }
+        fclose(file);
 
         // dsram
-        fp = fopen(files->dsram[i], "w");
-        if (fp) {
-            for (int line = 0; line < TSRAM_DEPTH; line++) {
-                for (int word = 0; word < CACHE_BLOCK_SIZE; word++) {
-                    fprintf(fp, "%08X\n", cores[i].cache.dsram[line].word[word]);
-                }
+        file = fopen(files->dsram[i], "w");
+        if (!file) goto file_error;
+        for (int line = 0; line < TSRAM_DEPTH; line++) {
+            for (int word = 0; word < CACHE_BLOCK_SIZE; word++) {
+                fprintf(file, "%08X\n", cores[i].cache.dsram[line].word[word]);
             }
-            fclose(fp);
         }
+        fclose(file);
+        
 
         // tsram
-        fp = fopen(files->tsram[i], "w");
-        if (fp) {
-            for (int line = 0; line < TSRAM_DEPTH; line++) {
-                uint32_t val = (cores[i].cache.tsram[line].mesi_state << 12) | (cores[i].cache.tsram[line].tag & 0xFFF);
-                fprintf(fp, "%08X\n", val);
-            }
-            fclose(fp);
+        file = fopen(files->tsram[i], "w");
+        if (!file) goto file_error;
+        for (int line = 0; line < TSRAM_DEPTH; line++) {
+            uint32_t val = (cores[i].cache.tsram[line].mesi_state << 12) | (cores[i].cache.tsram[line].tag & 0xFFF);
+            fprintf(file, "%08X\n", val);
         }
+        fclose(file);
 
         // stats
-        fp = fopen(files->stats[i], "w");
-        if (fp) {
-            fprintf(fp, "cycles %d\n", cores[i].stats.cycles);
-            fprintf(fp, "instructions %d\n", cores[i].stats.instructions);
-            fprintf(fp, "read_hit %d\n", cores[i].stats.read_hits);    
-            fprintf(fp, "write_hit %d\n", cores[i].stats.write_hits);  
-            fprintf(fp, "read_miss %d\n", cores[i].stats.read_misses);  
-            fprintf(fp, "write_miss %d\n", cores[i].stats.write_misses);
-            fprintf(fp, "decode_stall %d\n", cores[i].stats.decode_stall); 
-            fprintf(fp, "mem_stall %d\n", cores[i].stats.mem_stall);      
-            fclose(fp);
-        }
+        file = fopen(files->stats[i], "w");
+        if (!file) goto file_error;
+        fprintf(file, "cycles %d\n", cores[i].stats.cycles);
+        fprintf(file, "instructions %d\n", cores[i].stats.instructions);
+        fprintf(file, "read_hit %d\n", cores[i].stats.read_hits);    
+        fprintf(file, "write_hit %d\n", cores[i].stats.write_hits);  
+        fprintf(file, "read_miss %d\n", cores[i].stats.read_misses);  
+        fprintf(file, "write_miss %d\n", cores[i].stats.write_misses);
+        fprintf(file, "decode_stall %d\n", cores[i].stats.decode_stall); 
+        fprintf(file, "mem_stall %d\n", cores[i].stats.mem_stall);      
+        fclose(file);
     }
+
+    return;
+    file_error:
+    perror("write_output(): Error opening file!");
+    // And now you can add more logic here for handling failed files!
 }

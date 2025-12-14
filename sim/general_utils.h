@@ -17,7 +17,7 @@
 #define CACHE_BLOCK_SIZE 8
 #define REGISTER_COUNT 16 // R0 to R15
 #define TSRAM_DEPTH (DSRAM_DEPTH / CACHE_BLOCK_SIZE)
-
+#define CORE_COUNT 4
 
 typedef enum {
     OP_ADD = 0,

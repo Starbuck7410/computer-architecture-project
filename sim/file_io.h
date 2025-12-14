@@ -1,17 +1,18 @@
+#pragma once
 #include "general_utils.h"
 #include <stdlib.h>
 
 // File management
 typedef struct {
-    char* imem[4];
+    char* imem[CORE_COUNT];
     char* memin;
     char* memout;
-    char* regout[4];
-    char* trace[4];
+    char* regout[CORE_COUNT];
+    char* trace[CORE_COUNT];
     char* bustrace;
-    char* dsram[4];
-    char* tsram[4];
-    char* stats[4];
+    char* dsram[CORE_COUNT];
+    char* tsram[CORE_COUNT];
+    char* stats[CORE_COUNT];
 } SimFiles;
 
 // Function Declarations
