@@ -128,15 +128,20 @@ typedef struct {
 
 //Bus
 typedef struct {
+    // The function to call the bus will modify these
     int bus_orig_id;      // 3 bits: 0-3 for cores, 4 for Main Memory
     BusCmd bus_cmd;         
     uint32_t bus_addr;   // 21-bit word address 
     uint32_t bus_data;   // 32-bit word data 
+    
+    // This is returned from the bus
     bool bus_shared; 
+
+    // These are for the bus state  
+    int cooldown_timer;      // The bus must reply in 16 clock cycles
     int last_granted_device; // ID of the device that used the bus last cycle
     bool busy;               // Is the bus currently processing a transaction
 
 } SystemBus;
 
 
-// ========== Function Declarations ==========
