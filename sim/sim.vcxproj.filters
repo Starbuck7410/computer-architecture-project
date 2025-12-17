@@ -18,9 +18,27 @@
     <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="pipeline.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="file_io.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="memory.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="general_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="file_io.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pipeline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

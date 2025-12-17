@@ -46,7 +46,7 @@ void get_arguments(int argc, char* argv[], SimFiles* files) {
     for (int i = 0; i < CORE_COUNT; i++) files->stats[i] = argv[idx++];
 }
 
-// read imem[i] into struct
+// Read imem[i] into struct
 void read_imem(SimFiles* files, Core core[CORE_COUNT]) {
     FILE* file;
 
@@ -64,7 +64,7 @@ void read_imem(SimFiles* files, Core core[CORE_COUNT]) {
     }
 }
 
-// read main mem (need to define main mem arr)
+// Read main mem (need to define main mem arr)
 void read_mainmem(SimFiles* files, uint32_t* main_memory) {
     FILE* file;
 
@@ -79,7 +79,7 @@ void read_mainmem(SimFiles* files, uint32_t* main_memory) {
     }
 }
 
-// write outputs files 
+// Write outputs files once at the end of main loop
 void write_outputs(SimFiles* files, Core cores[CORE_COUNT], uint32_t* main_memory) {
     FILE* file;
 
@@ -145,4 +145,62 @@ void write_outputs(SimFiles* files, Core cores[CORE_COUNT], uint32_t* main_memor
     file_error:
     perror("write_output(): Error opening file!");
     // And now you can add more logic here for handling failed files!
+}
+
+// Write outputs each clock cycle (main loop iteration)
+void log_bus_trace(SimFiles* files, int cycle) {
+    // We write to bus_trace at the end of each cycle (loop),
+    // after executing all stages and bus transactions,
+    // just before advancing cycle++.
+    if (system_bus.bus_cmd == BUS_NOCMD) return;
+
+    FILE* fp = fopen(files->bustrace, "a");
+    if (fp) {
+        fprintf(fp, "%d %X %X %06X %08X %X\n", cycle, system_bus.bus_orig_id, system_bus.bus_cmd, system_bus.bus_addr & 0xFFFFF, system_bus.bus_data, system_bus.bus_shared);
+        fclose(fp);
+    }
+    
+}
+
+
+void log_core_trace(SimFiles* files, Core cores[CORE_COUNT], int cycle) {
+    // Pipeline movement happens at the end of each cycle (main loop iteration).
+    // We write to core_trace at the beginning of each loop 
+    for (int i = 0; i < CORE_COUNT; i++) {
+        if (cores[i].halted) continue;
+
+        FILE* fp = fopen(files->trace[i], "a");
+        if (fp) {
+            fprintf(fp, "%d ", cycle);
+
+            // FETCH
+            if (cores[i].pipe.fetch.active) fprintf(fp, "%03X ", cores[i].pipe.fetch.pc);
+            else fprintf(fp, "--- ");
+
+            // DECODE
+            if (cores[i].pipe.decode.active) fprintf(fp, "%03X ", cores[i].pipe.decode.pc);
+            else fprintf(fp, "--- ");
+
+            // EXEC
+            if (cores[i].pipe.execute.active) fprintf(fp, "%03X ", cores[i].pipe.execute.pc);
+            else fprintf(fp, "--- ");
+
+            // MEM
+            if (cores[i].pipe.mem.active) fprintf(fp, "%03X ", cores[i].pipe.mem.pc);
+            else fprintf(fp, "--- ");
+
+            // WB
+            if (cores[i].pipe.wb.active) fprintf(fp, "%03X ", cores[i].pipe.wb.pc);
+            else fprintf(fp, "--- ");
+
+            // Registers R2-R15
+            for (int r = 2; r < REGISTER_COUNT; r++) {
+                fprintf(fp, "%08X", cores[i].regs[r]);
+                if (r < REGISTER_COUNT - 1) fprintf(fp, " "); // space between regs
+            }
+
+            fprintf(fp, "\n");
+            fclose(fp);
+        }
+    }
 }

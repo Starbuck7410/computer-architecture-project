@@ -2,6 +2,8 @@
 #include "general_utils.h"
 #include <stdlib.h>
 
+extern SystemBus system_bus;
+
 // File management
 typedef struct {
     char* imem[CORE_COUNT];
