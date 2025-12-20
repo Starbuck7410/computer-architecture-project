@@ -181,3 +181,32 @@ void fetch_stage(Core * core){
     // Does this function do anything else?
     // Like i am genuinely asking here I really do not know
 }
+
+
+
+void memory_stage(Core * core){
+    // Performs the memory stage of the CPU
+
+
+    /*
+    if(!stall){ // We need to refine this condition more, think about stalls and bus activity
+        if(!is_cache_hit()){
+            bring_cache_block();
+            stall();
+            return;
+        }
+    
+        if(! read/write/whatever ){
+        
+            if (send_bus_read_request(core, address, t_line->mesi_state == MESI_SHARED)) { 
+                // Stall until the bus is not busy anymore
+                // And then send the request again
+            }
+ 
+        }
+        
+    } 
+    */
+
+
+}

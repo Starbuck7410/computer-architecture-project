@@ -26,32 +26,35 @@ uint32_t read_word_from_cache(Cache * cache, int address){
 }
 
 
-bool write_word_to_cache(Cache * cache, int address, uint32_t data, int core_id){
+bool write_word_to_cache(Core * core, int address, uint32_t data){
     // This function assumes there is a cache hit, and 
     // checks for the MESI state of the block for the Shared 
     // state. If it is Shared, this function must alert the bus 
     // to make this block invalid in the other cores. (Rather, 
     // the bus 'snoops' and finds out about this on it's own,
     // but the implementation details do not matter as much)
+
+    // This function returns whether the write was successful,
+    // and if it wasn't, the processor must send a BUS_RD/X request
+    // to the bus, and stall until the bus finishes the request, 
+    // and then write to the cache block.
+
     uint32_t index = (address >> 3) & 0x3F; // Bits 8:3
     uint32_t offset = address & 0x7; // Bits 2:0
-    TSRAM_Line* t_line = &cache->tsram[index];
-    DSRAM_Line* d_line = &cache->dsram[index];
+    TSRAM_Line* t_line = &core->cache.tsram[index];
+    DSRAM_Line* d_line = &core->cache.dsram[index];
 
     if (t_line->mesi_state == MESI_EXCLUSIVE || t_line->mesi_state == MESI_MODIFIED) { // We can write immediately
         d_line->word[offset] = data;
         t_line->mesi_state = MESI_MODIFIED;
         return true;
     }
-    else if (t_line->mesi_state == MESI_SHARED) { // Shared - the pipeline must stall
-        if (system_bus.bus_cmd == BUS_NOCMD || system_bus.bus_orig_id == core_id) { 
-            system_bus.bus_cmd = BUS_RDX;
-            system_bus.bus_addr = address;
-            system_bus.bus_orig_id = core_id;
-        }
-        return false;
-    }
     return false;
 }
+
+
+    
+
+
 
 

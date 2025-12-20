@@ -2,17 +2,16 @@
 The Computer Architecture project
 
 
-
-
-
 ## TODO:
 
 ### Step 1:
 - Design Structs, Enums, and overall architecture of the project
 - Copy and adapt assembler, simuator
 
-Amit Daniel and Zohar - You can fight amongst yourselves over who gets to write the fetch function and who makes test files and ensures we can load instructions into all the CPU cores successfully.\
-Shraga - Write more documentation and signatures for functions
+Amit - Implement `bus.c: send_bus_read_request()`, and add signature to `bus.h`
+Daniel - Implement `pipeline.c: fetch_stage()` and add the new files (`bus.h`, `bus.c`) to the visual studio project (add existing source)
+Zohar - Implement `bus.c: invalidate_cache_block()`, and add signature to `bus.h`
+Shraga - Think about the memory control flow (`pipeline.c: memory_stage()`)
 
 
 ## Code style conventions
