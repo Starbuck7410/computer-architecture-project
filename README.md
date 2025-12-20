@@ -9,7 +9,7 @@ The Computer Architecture project
 - Copy and adapt assembler, simuator
 
 Amit - Implement `bus.c: send_bus_read_request()`, and add signature to `bus.h`
-Daniel - Implement `pipeline.c: fetch_stage()` and add the new files (`bus.h`, `bus.c`) to the visual studio project (add existing source)
+Daniel - Implement `pipeline.c: fetch_stage()` [DONE]
 Zohar - Implement `bus.c: invalidate_cache_block()`, and add signature to `bus.h`
 Shraga - Think about the memory control flow (`pipeline.c: memory_stage()`)
 

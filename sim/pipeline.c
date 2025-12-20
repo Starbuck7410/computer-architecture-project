@@ -178,8 +178,20 @@ void decode_stage(Core * core){
 void fetch_stage(Core * core){
     // This function has to load an instruction into the instruction field
     // core->pipe.fetch.inst.binary_value
-    // Does this function do anything else?
-    // Like i am genuinely asking here I really do not know
+    
+    if (core == NULL) return;                       //check for valid core just to make sure
+    if (core->halted) {                             //make sure were not halted
+        core->pipe.fetch.active = false;            //insert bubble in fetch stage for tracing/pipeline logic
+        return;
+    }
+    uint32_t pc = core->pc & 0x3FF;                 //grab PC and just to make sure mask it to fit proj dimentions
+    uint32_t inst_word = core->imem[pc];            //grab the instruction at the curent pc
+    
+    core->pipe.fetch.pc = pc;                       //updates PC
+    core->pipe.fetch.inst.binary_value = inst_word; //updates the raw binary instruction
+    core->pipe.fetch.active = true;                 //mark fetch stage as containing a valid instruction
+    pc = (pc + 1) & 0x3FF;                          //increment pc, make sure its still within bounds.
+    core->pc = pc;                                  //update core's pc
 }
 
 
