@@ -127,12 +127,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bus.c" />
     <ClCompile Include="file_io.c" />
     <ClCompile Include="memory.c" />
     <ClCompile Include="pipeline.c" />
     <ClCompile Include="main.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bus.h" />
     <ClInclude Include="file_io.h" />
     <ClInclude Include="general_utils.h" />
     <ClInclude Include="memory.h" />
