@@ -29,3 +29,4 @@ Shraga - Think about the memory control flow (`pipeline.c: memory_stage()`)
 - Files and directories will be in `snake_case`
 - All relevant files will be lazily tossed in the same directory, `sim` for simulator, `asm` for assembler and `prog` for assembly files
 - The makefile will be outside of these directories, with recipes that target the different directories
+
