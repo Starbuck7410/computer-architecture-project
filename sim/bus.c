@@ -14,9 +14,10 @@ bool send_bus_read_request(Core * core, uint32_t address, bool exclusive){
         }
         system_bus.bus_addr = address;
         system_bus.bus_orig_id = core->id;
+        system_bus.cooldown_timer = BUS_DELAY;
         system_bus.busy = true;
 
-        // clear previous data (?)
+        // clear previous data
         system_bus.bus_data = 0;
         system_bus.bus_shared = false;
 
