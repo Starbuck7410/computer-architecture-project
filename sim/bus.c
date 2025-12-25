@@ -37,5 +37,8 @@ void invalidate_cache_block(Core * core[CORE_COUNT], int block_index, int safe_c
         return;
     }
 
-    // Invalidate the rest of the core's cache blocks whose index is block_index
+    for (int i = 0; i < CORE_COUNT; ++i) {
+        if (i == safe_core_index) continue;
+        core[i]->cache.tsram[block_index].mesi_state = MESI_INVALID;
+    }
 }
