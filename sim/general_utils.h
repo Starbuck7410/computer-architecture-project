@@ -129,6 +129,8 @@ typedef struct {
 
 //Bus
 typedef struct {
+    Cache * cpu_cache[CORE_COUNT];
+
     // The function to call the bus will modify these
     int bus_orig_id;      // 3 bits: 0-3 for cores, 4 for Main Memory
     BusCmd bus_cmd;         
@@ -139,10 +141,14 @@ typedef struct {
     bool bus_shared; 
 
     // These are for the bus state  
-    int cooldown_timer;      // The bus must reply in 16 clock cycles
+    int cooldown_timer;      // The bus must reply in BUS_DELAY clock cycles
+    int word_offset;         // The next word offset to bring in
     int last_granted_device; // ID of the device that used the bus last cycle
     bool busy;               // Is the bus currently processing a transaction
 
 } SystemBus;
+
+
+
 
 

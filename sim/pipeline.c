@@ -91,7 +91,7 @@ void decode_stage(Core * core){
     if (core->pipe.decode.active == 0) return; //Now check if were halted or bubbled
 
     // Perform the stage
-    Instruction* inst = &core->pipe.decode.inst;
+    Instruction * inst = &core->pipe.decode.inst;
     uint32_t binary_raw = inst->binary_value;
 
     inst->opcode = (Opcode)((binary_raw >> 24) & 0xFF);
@@ -122,8 +122,8 @@ void decode_stage(Core * core){
     // instruction reads (rs or rt), then stall.
     // and keep Decode active (so the instruction stays in decode for the next cycle).
     bool hazard = false;
-    PipelineStage* stages_to_check[3] = { &core->pipe.execute, &core->pipe.mem, &core->pipe.wb };
-    PipelineStage* s = stages_to_check[0];
+    PipelineStage * stages_to_check[3] = { &core->pipe.execute, &core->pipe.mem, &core->pipe.wb };
+    PipelineStage * s = stages_to_check[0];
     for (int i = 0; i < 3 && !hazard; ++i) {
         s = stages_to_check[i];
         uint8_t prev_rd = s->inst.rd;
@@ -220,5 +220,13 @@ void memory_stage(Core * core){
     } 
     */
 
+
+}
+
+
+void writeback_stage(Core * core){
+    // This function takes the result from the memory stage and the
+    // address of the register and stores it into the correct register
+    // in the register file.
 
 }

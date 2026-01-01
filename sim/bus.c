@@ -1,5 +1,4 @@
 #include "bus.h"
-
 extern SystemBus system_bus;
 
 bool send_bus_read_request(Core * core, uint32_t address, bool exclusive){
@@ -31,14 +30,46 @@ bool send_bus_read_request(Core * core, uint32_t address, bool exclusive){
 
 
 
-void invalidate_cache_block(Core * core[CORE_COUNT], int block_index, int safe_core_index){
+void invalidate_cache_block(int block_index, int safe_core_index){
     if(safe_core_index > CORE_COUNT - 1){
-        // We do not have THAT many cores
+        DEBUG_PRINT("invalidate_cache_block() -> Too many cores!");
         return;
     }
 
     for (int i = 0; i < CORE_COUNT; ++i) {
         if (i == safe_core_index) continue;
-        core[i]->cache.tsram[block_index].mesi_state = MESI_INVALID;
+        system_bus.cpu_cache[i]->tsram[block_index].mesi_state = MESI_INVALID;
     }
+}
+
+void init_bus(Core * core[CORE_COUNT]){
+    for(int i = 0; i < CORE_COUNT; i++){
+        system_bus.cpu_cache[i] = &(core[i]->cache);
+    }
+    // Maybe add more things for the cache init here later
+}
+
+void handle_bus_request(){
+    // This function happens every clock cycle.
+    // If the bus is busy, we must simply wait
+    // If not, we must send one word per clock cycle to the cache
+    // or, in the case of a flush, we must flush the entire cache to memory
+    // If the bus finished it's request, this function must clear the
+    // system_bus.busy flag.
+
+    // In the case of a BUS_RD/X, before reading from memory into the cache
+    // we must ensure the cache is clean in all the other cores, and if not, 
+    // flush it directly to the system memory before actually initializing the 
+    // BUS_RD/X request. This is done with ANOTHER 16 clock cycle timer,
+    // so it should be handled carefully.
+    
+    if (system_bus.cooldown_timer > 0) {
+        system_bus.cooldown_timer --;
+        return;
+    }
+
+    if(system_bus.bus_cmd == BUS_RD){
+        // read
+    }
+    // etc etc...
 }

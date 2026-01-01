@@ -8,9 +8,9 @@ The Computer Architecture project
 - Design Structs, Enums, and overall architecture of the project
 - Copy and adapt assembler, simuator
 
-Amit - Implement `bus.c: send_bus_read_request()`, and add signature to `bus.h`
-Daniel - Implement `pipeline.c: fetch_stage()` [DONE]
-Zohar - Implement `bus.c: invalidate_cache_block()`, and add signature to `bus.h` [DONE]
+Amit - Implement `bus.c: send_bus_read_request()`, and add signature to `bus.h`\
+Daniel - Implement `pipeline.c: fetch_stage()` [DONE]\
+Zohar - Implement `bus.c: invalidate_cache_block()`, and add signature to `bus.h` [DONE]\
 Shraga - Think about the memory control flow (`pipeline.c: memory_stage()`)
 
 
