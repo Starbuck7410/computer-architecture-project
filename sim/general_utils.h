@@ -121,9 +121,8 @@ typedef struct {
     Pipeline pipe;
     Cache cache;
     CoreStats stats;
-
+    BusInterface bus_interface;
     uint32_t imem[IMEM_DEPTH]; // Private Instruction Memory
-
     bool halted;            // halt
 } Core;
 
@@ -131,11 +130,7 @@ typedef struct {
 typedef struct {
     Cache * cpu_cache[CORE_COUNT];
 
-    // The function to call the bus will modify these
-    int bus_orig_id;      // 3 bits: 0-3 for cores, 4 for Main Memory
-    BusCmd bus_cmd;         
-    uint32_t bus_addr;   // 21-bit word address 
-    uint32_t bus_data;   // 32-bit word data 
+    BusRequest request;
     
     // This is returned from the bus
     bool bus_shared; 
@@ -148,7 +143,17 @@ typedef struct {
 
 } SystemBus;
 
+typedef struct {
+    int time_since_request;
+    bool waiting;
+    BusRequest request;
 
+} BusInterface;
 
-
+typedef struct {
+    int bus_orig_id;      // 3 bits: 0-3 for cores, 4 for Main Memory
+    BusCmd bus_cmd;         
+    uint32_t bus_addr;   // 21-bit word address 
+    uint32_t bus_data;   // 32-bit word data 
+} BusRequest;
 

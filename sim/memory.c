@@ -49,7 +49,7 @@ bool write_word_to_cache(Core * core, int address, uint32_t data){
             t_line->mesi_state = MESI_MODIFIED;
             return true;
         case MESI_SHARED:
-            invalidate_cache_block(index, core->id);
+            send_bus_read_request(core, address, true);
             t_line->mesi_state = MESI_MODIFIED;
             return true;
         case MESI_INVALID:

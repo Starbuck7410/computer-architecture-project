@@ -1,23 +1,25 @@
 #include "bus.h"
 extern SystemBus system_bus;
 
+
 bool send_bus_read_request(Core * core, uint32_t address, bool exclusive){
+    // This calls the bus handler, not the system bus itself, we must rewrite this one
     bool was_bus_busy = system_bus.busy;
 
     if (!was_bus_busy) {
         if (exclusive) {
-            system_bus.bus_cmd = BUS_RDX;
+            system_bus.request.bus_cmd = BUS_RDX;
         }
         else{
-            system_bus.bus_cmd = BUS_RD;
+            system_bus.request.bus_cmd = BUS_RD;
         }
-        system_bus.bus_addr = address;
-        system_bus.bus_orig_id = core->id;
+        system_bus.request.bus_addr = address;
+        system_bus.request.bus_orig_id = core->id;
         system_bus.cooldown_timer = BUS_DELAY;
         system_bus.busy = true;
 
         // clear previous data
-        system_bus.bus_data = 0;
+        system_bus.request.bus_data = 0;
         system_bus.bus_shared = false;
 
     }
@@ -30,17 +32,17 @@ bool send_bus_read_request(Core * core, uint32_t address, bool exclusive){
 
 
 
-void invalidate_cache_block(int block_index, int safe_core_index){
-    if(safe_core_index > CORE_COUNT - 1){
-        DEBUG_PRINT("invalidate_cache_block() -> Too many cores!");
-        return;
-    }
+// void invalidate_cache_block(int block_index, int safe_core_index){
+//     if(safe_core_index > CORE_COUNT - 1){
+//         DEBUG_PRINT("invalidate_cache_block() -> Too many cores!");
+//         return;
+//     }
 
-    for (int i = 0; i < CORE_COUNT; ++i) {
-        if (i == safe_core_index) continue;
-        system_bus.cpu_cache[i]->tsram[block_index].mesi_state = MESI_INVALID;
-    }
-}
+//     for (int i = 0; i < CORE_COUNT; ++i) {
+//         if (i == safe_core_index) continue;
+//         system_bus.cpu_cache[i]->tsram[block_index].mesi_state = MESI_INVALID;
+//     }
+// }
 
 void init_bus(Core * core[CORE_COUNT]){
     for(int i = 0; i < CORE_COUNT; i++){
@@ -49,13 +51,13 @@ void init_bus(Core * core[CORE_COUNT]){
     // Maybe add more things for the cache init here later
 }
 
-void handle_bus_request(){
-    // This function happens every clock cycle.
-    // If the bus is busy, we must simply wait
-    // If not, we must send one word per clock cycle to the cache
-    // or, in the case of a flush, we must flush the entire cache to memory
-    // If the bus finished it's request, this function must clear the
-    // system_bus.busy flag.
+void bus_request_handler(){
+    // This function happens every clock cycle;
+    // If the bus is on cooldown, we must simply wait.
+    // If not, we must send one word per clock cycle to the cache using the 
+    // bus_data line, or in the case of a flush, we must flush the entire
+    // cache to memory If the bus finished it's request, this function must 
+    // clear the system_bus.busy flag.
 
     // In the case of a BUS_RD/X, before reading from memory into the cache
     // we must ensure the cache is clean in all the other cores, and if not, 
@@ -68,8 +70,18 @@ void handle_bus_request(){
         return;
     }
 
-    if(system_bus.bus_cmd == BUS_RD){
+    if(system_bus.request.bus_cmd == BUS_RD){
         // read
     }
     // etc etc...
+}
+
+
+void bus_handler(){
+    /*
+    If request is being handled, keep handling.
+
+    I not, check all 4 interfaces for a request and handle a request
+    using round robin
+    */
 }
