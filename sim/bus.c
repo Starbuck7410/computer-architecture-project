@@ -16,7 +16,7 @@ void send_bus_read_request(Core * core, uint32_t address, bool exclusive){
     }
     bus_handler;
     // both cases calling bus_handler and it will handle the request
-    // we dont care if bus busy or not here (i think)
+    // we dont care if bus busy or not here (?)
 }
 
 
