@@ -1,32 +1,22 @@
 #include "bus.h"
-extern SystemBus system_bus;
 
 
-bool send_bus_read_request(Core * core, uint32_t address, bool exclusive){
-    // This calls the bus handler, not the system bus itself, we must rewrite this one
-    bool was_bus_busy = system_bus.busy;
-
-    if (!was_bus_busy) {
-        if (exclusive) {
-            system_bus.request.bus_cmd = BUS_RDX;
-        }
-        else{
-            system_bus.request.bus_cmd = BUS_RD;
-        }
-        system_bus.request.bus_addr = address;
-        system_bus.request.bus_orig_id = core->id;
-        system_bus.cooldown_timer = BUS_DELAY;
-        system_bus.busy = true;
-
-        // clear previous data
-        system_bus.request.bus_data = 0;
-        system_bus.bus_shared = false;
-
+void send_bus_read_request(Core * core, uint32_t address, bool exclusive){
+    // This calls the bus handler, not the system bus itself
+    //bool was_bus_busy = system_bus.busy;
+    BusRequest read_request;
+    read_request.bus_orig_id = core->id;
+    read_request.bus_addr = address;
+    read_request.bus_data = 0; // not sure if we want to clear previous data or not
+    if (exclusive) {
+        read_request.bus_cmd = BUS_RDX;
     }
-
-    return was_bus_busy; // This function returns whether the bus was busy or not
-    // True = bus was busy, request failed
-    // False = bus wasn't busy, request sent
+    else {
+        read_request.bus_cmd = BUS_RD;
+    }
+    bus_handler;
+    // both cases calling bus_handler and it will handle the request
+    // we dont care if bus busy or not here (i think)
 }
 
 
