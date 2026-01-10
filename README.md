@@ -9,7 +9,7 @@ The Computer Architecture project
 - Copy and adapt assembler, simuator
 
 Amit - Implement `bus.c: send_bus_read_request()`, and add signature to `bus.h`\
-Daniel - Implement `pipeline.c: WB_stage()` [DONE]
+Daniel - Implement `pipeline.c: WB_stage()` [DONE]\
 Zohar - Implement `bus.c: invalidate_cache_block()`, and add signature to `bus.h` [DONE]\
 Shraga - Think about the memory control flow (`pipeline.c: memory_stage()`)
 
