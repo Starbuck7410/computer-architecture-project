@@ -224,9 +224,37 @@ void memory_stage(Core * core){
 }
 
 
-void writeback_stage(Core * core){
-    // This function takes the result from the memory stage and the
-    // address of the register and stores it into the correct register
-    // in the register file.
+void writeback_stage(Core* core) {
+    // Commits the WB stage into the architectural state (register file + halt + stats).
+    // Input:  core->pipe.wb contains the instruction + result.
+    // Output: core->regs[] updated if needed, core->halted may become true.
 
+    if (core == NULL) return;
+    if (!core->pipe.wb.active) return;   // bubble = nothing to retire
+
+    Instruction* inst = &core->pipe.wb.inst;
+
+    // Retire instruction counter (counts real instructions only)
+    core->stats.instructions += 1;
+
+    // HALT "takes effect" when it retires (reaches WB)
+    if (inst->opcode == OP_HALT) {
+        core->halted = true;
+        core->regs[0] = 0;              // enforce R0 rule anyway
+        return;
+    }
+
+    // Writeback for ops that produce a value in rd
+    if (opcode_writes_rd(inst->opcode)) {
+        uint8_t rd = inst->rd;
+
+        // R0 is hardwired to 0: ignore any write attempts
+        if (rd != 0) {
+            core->regs[rd] = core->pipe.wb.result;
+        }
+    }
+
+    // Always enforce architectural rule: R0 must stay 0
+    core->regs[0] = 0;
 }
+
