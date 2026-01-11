@@ -128,7 +128,25 @@ typedef struct {
 
 //Bus
 typedef struct {
+    int bus_orig_id;      // 3 bits: 0-3 for cores, 4 for Main Memory
+    BusCmd bus_cmd;         
+    uint32_t bus_addr;   // 21-bit word address 
+    uint32_t bus_data;   // 32-bit word data 
+} BusRequest;
+
+typedef struct {
+    int time_since_request;
+    bool waiting;
+    BusRequest request;
+
+} BusInterface;
+
+
+
+typedef struct {
     Cache * cpu_cache[CORE_COUNT];
+    BusInterface * bus_interface[CORE_COUNT];
+    int * system_memory;
 
     BusRequest request;
     
@@ -143,17 +161,4 @@ typedef struct {
 
 } SystemBus;
 
-typedef struct {
-    int time_since_request;
-    bool waiting;
-    BusRequest request;
-
-} BusInterface;
-
-typedef struct {
-    int bus_orig_id;      // 3 bits: 0-3 for cores, 4 for Main Memory
-    BusCmd bus_cmd;         
-    uint32_t bus_addr;   // 21-bit word address 
-    uint32_t bus_data;   // 32-bit word data 
-} BusRequest;
 

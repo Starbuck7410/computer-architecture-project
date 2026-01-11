@@ -59,11 +59,65 @@ void bus_request_handler(){
         system_bus.cooldown_timer --;
         return;
     }
-
-    if(system_bus.request.bus_cmd == BUS_RD){
-        // read
+    int core_id = system_bus.request.bus_orig_id;
+    int cache_block = (system_bus.request.bus_addr >> 3) & 0b111111;
+    if(system_bus.request.bus_cmd == BUS_RD || system_bus.request.bus_cmd == BUS_RDX){
+        int address = system_bus.word_offset + system_bus.request.bus_addr;
+        system_bus.request.bus_data = system_bus.system_memory[address];
+        system_bus.word_offset++;
     }
-    // etc etc...
+    if(system_bus.request.bus_cmd == BUS_FLUSH){
+        int address = (system_bus.cpu_cache[core_id]->tsram[cache_block].tag * DSRAM_DEPTH) | (cache_block * CACHE_BLOCK_SIZE);
+        system_bus.bus_interface[core_id]->request.bus_data = system_bus.cpu_cache[core_id]->dsram[cache_block].word[system_bus.word_offset];
+        system_bus.request.bus_data = system_bus.bus_interface[core_id]->request.bus_data;
+
+        system_bus.word_offset++;
+    }
+    
+    if(system_bus.word_offset == CACHE_BLOCK_SIZE){
+        if(system_bus.request.bus_cmd == BUS_RDX) {
+            system_bus.cpu_cache[core_id]->tsram[cache_block].mesi_state = MESI_EXCLUSIVE;
+        } 
+        if(system_bus.request.bus_cmd == BUS_RD) {
+            system_bus.cpu_cache[core_id]->tsram[cache_block].mesi_state = system_bus.bus_shared ? MESI_SHARED : MESI_EXCLUSIVE; 
+        }
+
+        system_bus.word_offset = 0;
+        system_bus.request.bus_cmd = BUS_NOCMD;
+        system_bus.request.bus_addr = 0;
+        system_bus.cooldown_timer = 0;
+        system_bus.busy = false;
+        system_bus.last_granted_device = system_bus.request.bus_orig_id;
+        system_bus.request.bus_orig_id = 0;
+        
+        system_bus.bus_shared = 0;
+    }
+
+    if(system_bus.request.bus_cmd == BUS_NOCMD){
+        int start_index = (system_bus.last_granted_device + 1) % CORE_COUNT;
+        for (int i = 0; i < CORE_COUNT; i++) {
+            int current_core = (start_index + i) % CORE_COUNT;
+    
+            if (system_bus.bus_interface[current_core]->request.bus_cmd != BUS_NOCMD) {
+                
+                system_bus.request.bus_cmd = system_bus.bus_interface[current_core]->request.bus_cmd;
+                system_bus.request.bus_addr = system_bus.bus_interface[current_core]->request.bus_addr;
+                system_bus.request.bus_orig_id = current_core;
+                
+                system_bus.busy = true;
+                system_bus.word_offset = 0;
+
+                if (system_bus.request.bus_cmd == BUS_RD || system_bus.request.bus_cmd == BUS_RDX) {
+                    system_bus.cooldown_timer = BUS_DELAY; 
+                } 
+                else {
+                    // For BUS_FLUSH operations, we start the transfer immediately 
+                    system_bus.cooldown_timer = 0;
+                }
+                break; 
+            }
+        }
+    }
 }
 
 

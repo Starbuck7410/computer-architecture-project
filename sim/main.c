@@ -1,6 +1,9 @@
 #include "general_utils.h"
 #include "file_io.h"
 #include "pipeline.h"
+
+SystemBus system_bus;
+
 int main(int argc, char ** argv){
     // Please add the follwing files to the visual studio thingy 
     // (Right click on soruce -> add existing source -> add the file)
@@ -9,6 +12,7 @@ int main(int argc, char ** argv){
     // SimFiles sim_files;
     // Core cores[CORE_COUNT];
     // get_arguments(argc, argv, &sim_files);
+    system_bus.system_memory = malloc(MEMIN_DEPTH);
     Core * cores[CORE_COUNT];
 
     while(true){
