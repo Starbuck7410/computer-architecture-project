@@ -1,8 +1,5 @@
 #include "memory.h"
-
-extern SystemBus system_bus; // Guys this is for you.
-// This means system_bus is a global variable, and exists EVERYWHERE
-
+#include "bus.h"
 
 
 bool is_cache_hit(Cache * cache, int address){
@@ -34,22 +31,31 @@ bool write_word_to_cache(Core * core, int address, uint32_t data){
     // the bus 'snoops' and finds out about this on it's own,
     // but the implementation details do not matter as much)
 
-    // This function returns whether the write was successful,
-    // and if it wasn't, the processor must send a BUS_RD/X request
-    // to the bus, and stall until the bus finishes the request, 
-    // and then write to the cache block.
+    // This function returns whether we should stall the memory
+    // stage because of a failed write to the cache. If it wasn't,
+    // the processor must send a BUS_RD request to the bus, 
+    // and stall until the bus finishes the request, and then
+    // write to the cache block.
 
     uint32_t index = (address >> 3) & 0x3F; // Bits 8:3
     uint32_t offset = address & 0x7; // Bits 2:0
     TSRAM_Line* t_line = &core->cache.tsram[index];
     DSRAM_Line* d_line = &core->cache.dsram[index];
 
-    if (t_line->mesi_state == MESI_EXCLUSIVE || t_line->mesi_state == MESI_MODIFIED) { // We can write immediately
-        d_line->word[offset] = data;
-        t_line->mesi_state = MESI_MODIFIED;
-        return true;
+    switch (t_line->mesi_state){
+        case MESI_EXCLUSIVE:
+        case MESI_MODIFIED:
+            d_line->word[offset] = data;
+            t_line->mesi_state = MESI_MODIFIED;
+            return true;
+        case MESI_SHARED:
+            send_bus_read_request(core, address, true);
+            t_line->mesi_state = MESI_MODIFIED;
+            return true;
+        case MESI_INVALID:
+            send_bus_read_request(core, address, false); // We gotta rethink this one
+            return false;
     }
-    return false;
 }
 
 

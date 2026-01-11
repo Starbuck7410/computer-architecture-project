@@ -18,6 +18,7 @@
 #define REGISTER_COUNT 16 // R0 to R15
 #define TSRAM_DEPTH (DSRAM_DEPTH / CACHE_BLOCK_SIZE)
 #define CORE_COUNT 4
+#define BUS_DELAY 16
 
 typedef enum {
     OP_ADD = 0,
@@ -120,28 +121,39 @@ typedef struct {
     Pipeline pipe;
     Cache cache;
     CoreStats stats;
-
+    BusInterface bus_interface;
     uint32_t imem[IMEM_DEPTH]; // Private Instruction Memory
-
     bool halted;            // halt
 } Core;
 
 //Bus
 typedef struct {
-    // The function to call the bus will modify these
-    int bus_orig_id;      // 3 bits: 0-3 for cores, 4 for Main Memory
-    BusCmd bus_cmd;         
-    uint32_t bus_addr;   // 21-bit word address 
-    uint32_t bus_data;   // 32-bit word data 
+    Cache * cpu_cache[CORE_COUNT];
+
+    BusRequest request;
     
     // This is returned from the bus
     bool bus_shared; 
 
     // These are for the bus state  
-    int cooldown_timer;      // The bus must reply in 16 clock cycles
+    int cooldown_timer;      // The bus must reply in BUS_DELAY clock cycles
+    int word_offset;         // The next word offset to bring in
     int last_granted_device; // ID of the device that used the bus last cycle
     bool busy;               // Is the bus currently processing a transaction
 
 } SystemBus;
 
+typedef struct {
+    int time_since_request;
+    bool waiting;
+    BusRequest request;
+
+} BusInterface;
+
+typedef struct {
+    int bus_orig_id;      // 3 bits: 0-3 for cores, 4 for Main Memory
+    BusCmd bus_cmd;         
+    uint32_t bus_addr;   // 21-bit word address 
+    uint32_t bus_data;   // 32-bit word data 
+} BusRequest;
 

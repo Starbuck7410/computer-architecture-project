@@ -91,7 +91,7 @@ void decode_stage(Core * core){
     if (core->pipe.decode.active == 0) return; //Now check if were halted or bubbled
 
     // Perform the stage
-    Instruction* inst = &core->pipe.decode.inst;
+    Instruction * inst = &core->pipe.decode.inst;
     uint32_t binary_raw = inst->binary_value;
 
     inst->opcode = (Opcode)((binary_raw >> 24) & 0xFF);
@@ -122,8 +122,8 @@ void decode_stage(Core * core){
     // instruction reads (rs or rt), then stall.
     // and keep Decode active (so the instruction stays in decode for the next cycle).
     bool hazard = false;
-    PipelineStage* stages_to_check[3] = { &core->pipe.execute, &core->pipe.mem, &core->pipe.wb };
-    PipelineStage* s = stages_to_check[0];
+    PipelineStage * stages_to_check[3] = { &core->pipe.execute, &core->pipe.mem, &core->pipe.wb };
+    PipelineStage * s = stages_to_check[0];
     for (int i = 0; i < 3 && !hazard; ++i) {
         s = stages_to_check[i];
         uint8_t prev_rd = s->inst.rd;
@@ -178,8 +178,20 @@ void decode_stage(Core * core){
 void fetch_stage(Core * core){
     // This function has to load an instruction into the instruction field
     // core->pipe.fetch.inst.binary_value
-    // Does this function do anything else?
-    // Like i am genuinely asking here I really do not know
+    
+    if (core == NULL) return;                       //check for valid core just to make sure
+    if (core->halted) {                             //make sure were not halted
+        core->pipe.fetch.active = false;            //insert bubble in fetch stage for tracing/pipeline logic
+        return;
+    }
+    uint32_t pc = core->pc & 0x3FF;                 //grab PC and just to make sure mask it to fit proj dimentions
+    uint32_t inst_word = core->imem[pc];            //grab the instruction at the curent pc
+    
+    core->pipe.fetch.pc = pc;                       //updates PC
+    core->pipe.fetch.inst.binary_value = inst_word; //updates the raw binary instruction
+    core->pipe.fetch.active = true;                 //mark fetch stage as containing a valid instruction
+    pc = (pc + 1) & 0x3FF;                          //increment pc, make sure its still within bounds.
+    core->pc = pc;                                  //update core's pc
 }
 
 
@@ -210,3 +222,39 @@ void memory_stage(Core * core){
 
 
 }
+
+
+void writeback_stage(Core* core) {
+    // Commits the WB stage into the architectural state (register file + halt + stats).
+    // Input:  core->pipe.wb contains the instruction + result.
+    // Output: core->regs[] updated if needed, core->halted may become true.
+
+    if (core == NULL) return;
+    if (!core->pipe.wb.active) return;   // bubble = nothing to retire
+
+    Instruction* inst = &core->pipe.wb.inst;
+
+    // Retire instruction counter (counts real instructions only)
+    core->stats.instructions += 1;
+
+    // HALT "takes effect" when it retires (reaches WB)
+    if (inst->opcode == OP_HALT) {
+        core->halted = true;
+        core->regs[0] = 0;              // enforce R0 rule anyway
+        return;
+    }
+
+    // Writeback for ops that produce a value in rd
+    if (opcode_writes_rd(inst->opcode)) {
+        uint8_t rd = inst->rd;
+
+        // R0 is hardwired to 0: ignore any write attempts
+        if (rd != 0) {
+            core->regs[rd] = core->pipe.wb.result;
+        }
+    }
+
+    // Always enforce architectural rule: R0 must stay 0
+    core->regs[0] = 0;
+}
+
