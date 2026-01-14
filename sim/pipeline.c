@@ -95,10 +95,11 @@ void decode_stage(Core * core){
 
     // --- HAZARD DETECTION (RAW) ---
     bool hazard = false;
-    // We check Execute, Mem, and WB stages for instructions writing to registers we need
-    PipelineStage * stages[3] = { &core->pipe.execute, &core->pipe.mem, &core->pipe.wb };
+    // We check Execute and Mem stages for instructions writing to registers we need
+    // (WB has already written back at the start of the cycle)
+    PipelineStage * stages[2] = { &core->pipe.execute, &core->pipe.mem };
     
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 2; ++i) {
         if (stages[i]->active && opcode_writes_rd(stages[i]->inst.opcode)) {
             uint8_t dest_reg = stages[i]->inst.rd;
             if (dest_reg == 0) continue; // Writing to R0 is effectively no-op
