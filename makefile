@@ -7,7 +7,7 @@
 #
 
 SOURCE_SIM = $(wildcard sim/*.h sim/*.c)
-TARGET_SIM = simulator
+TARGET_SIM = test/simulator
 FLAGS = -Wall -Wextra
 DEBUG_FLAGS = -Wall -Wextra -g -O0 -DDEBUG
 
@@ -25,5 +25,10 @@ simulator-run: simulator
 
 clean: 
 	@rm -f $(TARGET_SIM)
+
+clean-test:
+	@rm -f $(TARGET_SIM)
+	@rm -f test/*trace.txt test/stats* test/*out* test/*ram*
+
 	
-.PHONY: clean simulator-run
+.PHONY: clean simulator-run clean-test

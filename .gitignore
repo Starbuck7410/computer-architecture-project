@@ -5,7 +5,7 @@
 
 # I hate MS Visual Studio, wtf is this gitignore??
 simulator
-
+test
 
 # User-specific files
 *.rsuser

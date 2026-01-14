@@ -1,7 +1,7 @@
 #include "file_io.h"
 
 void get_arguments(int argc, char* argv[], SimFiles* files) {
-    // defult
+    // defaults
     if (argc < 28) {
         files->imem[0] = "imem0.txt";
         files->imem[1] = "imem1.txt";
@@ -47,15 +47,15 @@ void get_arguments(int argc, char* argv[], SimFiles* files) {
 }
 
 // Read imem[i] into struct
-void read_imem(SimFiles* files, Core core[CORE_COUNT]) {
+void read_imem(SimFiles* files, Core* core[CORE_COUNT]) {
     FILE* file;
 
     for (int i = 0; i < CORE_COUNT; i++) {
-        memset(core[i].imem, 0, sizeof(core[i].imem));
+        memset(core[i]->imem, 0, sizeof(core[i]->imem));
         file = fopen(files->imem[i], "r");
         if (file) {
             for (int addr = 0; addr < IMEM_DEPTH; addr++) {
-                if (fscanf(file, "%08x", &core[i].imem[addr]) == EOF) {
+                if (fscanf(file, "%08x", &core[i]->imem[addr]) == EOF) {
                     break;
                 }
             }
@@ -64,7 +64,7 @@ void read_imem(SimFiles* files, Core core[CORE_COUNT]) {
     }
 }
 
-// Read main mem (need to define main mem arr)
+// Read main mem
 void read_mainmem(SimFiles* files, uint32_t* main_memory) {
     FILE* file;
 
@@ -80,10 +80,11 @@ void read_mainmem(SimFiles* files, uint32_t* main_memory) {
 }
 
 // Write outputs files once at the end of main loop
-void write_outputs(SimFiles* files, Core cores[CORE_COUNT], uint32_t* main_memory) {
+void write_outputs(SimFiles* files, Core* cores[CORE_COUNT], uint32_t* main_memory) {
     FILE* file;
 
     int max_addr = MEMIN_DEPTH-1;
+    // Find last non-zero address to avoid huge files
     while (max_addr >= 0 && main_memory[max_addr] == 0) {
         max_addr--;
     }
@@ -103,7 +104,7 @@ void write_outputs(SimFiles* files, Core cores[CORE_COUNT], uint32_t* main_memor
         file = fopen(files->regout[i], "w");
         if (!file) goto file_error;
         for (int r = 2; r < REGISTER_COUNT; r++) { // R2 to R15
-            fprintf(file, "%08X\n", cores[i].regs[r]);
+            fprintf(file, "%08X\n", cores[i]->regs[r]);
         }
         fclose(file);
 
@@ -112,7 +113,7 @@ void write_outputs(SimFiles* files, Core cores[CORE_COUNT], uint32_t* main_memor
         if (!file) goto file_error;
         for (int line = 0; line < TSRAM_DEPTH; line++) {
             for (int word = 0; word < CACHE_BLOCK_SIZE; word++) {
-                fprintf(file, "%08X\n", cores[i].cache.dsram[line].word[word]);
+                fprintf(file, "%08X\n", cores[i]->cache.dsram[line].word[word]);
             }
         }
         fclose(file);
@@ -122,7 +123,7 @@ void write_outputs(SimFiles* files, Core cores[CORE_COUNT], uint32_t* main_memor
         file = fopen(files->tsram[i], "w");
         if (!file) goto file_error;
         for (int line = 0; line < TSRAM_DEPTH; line++) {
-            uint32_t val = (cores[i].cache.tsram[line].mesi_state << 12) | (cores[i].cache.tsram[line].tag & 0xFFF);
+            uint32_t val = (cores[i]->cache.tsram[line].mesi_state << 12) | (cores[i]->cache.tsram[line].tag & 0xFFF);
             fprintf(file, "%08X\n", val);
         }
         fclose(file);
@@ -130,73 +131,72 @@ void write_outputs(SimFiles* files, Core cores[CORE_COUNT], uint32_t* main_memor
         // stats
         file = fopen(files->stats[i], "w");
         if (!file) goto file_error;
-        fprintf(file, "cycles %d\n", cores[i].stats.cycles);
-        fprintf(file, "instructions %d\n", cores[i].stats.instructions);
-        fprintf(file, "read_hit %d\n", cores[i].stats.read_hits);    
-        fprintf(file, "write_hit %d\n", cores[i].stats.write_hits);  
-        fprintf(file, "read_miss %d\n", cores[i].stats.read_misses);  
-        fprintf(file, "write_miss %d\n", cores[i].stats.write_misses);
-        fprintf(file, "decode_stall %d\n", cores[i].stats.decode_stall); 
-        fprintf(file, "mem_stall %d\n", cores[i].stats.mem_stall);      
+        fprintf(file, "cycles %d\n", cores[i]->stats.cycles);
+        fprintf(file, "instructions %d\n", cores[i]->stats.instructions);
+        fprintf(file, "read_hit %d\n", cores[i]->stats.read_hits);    
+        fprintf(file, "write_hit %d\n", cores[i]->stats.write_hits);  
+        fprintf(file, "read_miss %d\n", cores[i]->stats.read_misses);  
+        fprintf(file, "write_miss %d\n", cores[i]->stats.write_misses);
+        fprintf(file, "decode_stall %d\n", cores[i]->stats.decode_stall); 
+        fprintf(file, "mem_stall %d\n", cores[i]->stats.mem_stall);      
         fclose(file);
     }
 
     return;
     file_error:
     perror("write_output(): Error opening file!");
-    // And now you can add more logic here for handling failed files!
 }
 
 // Write outputs each clock cycle (main loop iteration)
 void log_bus_trace(SimFiles* files, int cycle) {
-    // We write to bus_trace at the end of each cycle (loop),
-    // after executing all stages and bus transactions,
-    // just before advancing cycle++.
     if (system_bus.bus_cmd == BUS_NOCMD) return;
 
     FILE* fp = fopen(files->bustrace, "a");
     if (fp) {
-        fprintf(fp, "%d %X %X %06X %08X %X\n", cycle, system_bus.bus_orig_id, system_bus.bus_cmd, system_bus.bus_addr & 0xFFFFF, system_bus.bus_data, system_bus.bus_shared);
+        fprintf(fp, "%d %X %X %06X %08X %X\n", 
+            cycle, 
+            system_bus.bus_orig_id, 
+            system_bus.bus_cmd, 
+            system_bus.bus_addr & 0xFFFFF, 
+            system_bus.bus_data, 
+            system_bus.bus_shared);
         fclose(fp);
     }
-    
 }
 
 
-void log_core_trace(SimFiles* files, Core cores[CORE_COUNT], int cycle) {
-    // Pipeline movement happens at the end of each cycle (main loop iteration).
-    // We write to core_trace at the beginning of each loop 
+void log_core_trace(SimFiles* files, Core* cores[CORE_COUNT], int cycle) {
     for (int i = 0; i < CORE_COUNT; i++) {
-        if (cores[i].halted) continue;
+        if (cores[i]->halted) continue;
 
         FILE* fp = fopen(files->trace[i], "a");
         if (fp) {
             fprintf(fp, "%d ", cycle);
 
             // FETCH
-            if (cores[i].pipe.fetch.active) fprintf(fp, "%03X ", cores[i].pipe.fetch.pc);
+            if (cores[i]->pipe.fetch.active) fprintf(fp, "%03X ", cores[i]->pipe.fetch.pc);
             else fprintf(fp, "--- ");
 
             // DECODE
-            if (cores[i].pipe.decode.active) fprintf(fp, "%03X ", cores[i].pipe.decode.pc);
+            if (cores[i]->pipe.decode.active) fprintf(fp, "%03X ", cores[i]->pipe.decode.pc);
             else fprintf(fp, "--- ");
 
             // EXEC
-            if (cores[i].pipe.execute.active) fprintf(fp, "%03X ", cores[i].pipe.execute.pc);
+            if (cores[i]->pipe.execute.active) fprintf(fp, "%03X ", cores[i]->pipe.execute.pc);
             else fprintf(fp, "--- ");
 
             // MEM
-            if (cores[i].pipe.mem.active) fprintf(fp, "%03X ", cores[i].pipe.mem.pc);
+            if (cores[i]->pipe.mem.active) fprintf(fp, "%03X ", cores[i]->pipe.mem.pc);
             else fprintf(fp, "--- ");
 
             // WB
-            if (cores[i].pipe.wb.active) fprintf(fp, "%03X ", cores[i].pipe.wb.pc);
+            if (cores[i]->pipe.wb.active) fprintf(fp, "%03X ", cores[i]->pipe.wb.pc);
             else fprintf(fp, "--- ");
 
             // Registers R2-R15
             for (int r = 2; r < REGISTER_COUNT; r++) {
-                fprintf(fp, "%08X", cores[i].regs[r]);
-                if (r < REGISTER_COUNT - 1) fprintf(fp, " "); // space between regs
+                fprintf(fp, "%08X", cores[i]->regs[r]);
+                if (r < REGISTER_COUNT - 1) fprintf(fp, " "); 
             }
 
             fprintf(fp, "\n");
