@@ -83,16 +83,10 @@ void read_mainmem(SimFiles* files, uint32_t* main_memory) {
 void write_outputs(SimFiles* files, Core* cores[CORE_COUNT], uint32_t* main_memory) {
     FILE* file;
 
-    int max_addr = MEMIN_DEPTH-1;
-    // Find last non-zero address to avoid huge files
-    while (max_addr >= 0 && main_memory[max_addr] == 0) {
-        max_addr--;
-    }
-    
-    // memout
+    // memout: write the full main memory image (2^21 words)
     file = fopen(files->memout, "w");
     if (!file) goto file_error;
-    for (int i = 0; i <= max_addr; i++) {
+    for (int i = 0; i < MEMIN_DEPTH; i++) {
         fprintf(file, "%08X\n", main_memory[i]);
     }
     fclose(file);
@@ -167,7 +161,13 @@ void log_bus_trace(SimFiles* files, int cycle) {
 
 void log_core_trace(SimFiles* files, Core* cores[CORE_COUNT], int cycle) {
     for (int i = 0; i < CORE_COUNT; i++) {
-        if (cores[i]->halted) continue;
+        // Print as long as at least one pipeline stage is active.
+        if (cores[i]->halted &&
+            !cores[i]->pipe.fetch.active && !cores[i]->pipe.decode.active &&
+            !cores[i]->pipe.execute.active && !cores[i]->pipe.mem.active &&
+            !cores[i]->pipe.wb.active) {
+            continue;
+        }
 
         FILE* fp = fopen(files->trace[i], "a");
         if (fp) {

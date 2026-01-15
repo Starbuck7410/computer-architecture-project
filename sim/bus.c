@@ -96,11 +96,32 @@ void bus_handler(){
         BusInterface *bi = system_bus.bus_interface[id];
 
         if (bi->has_pending_request && !bi->request_done) {
+
+            // Each new BusRd/BusRdX transaction starts with bus_shared = 0
+            system_bus.bus_shared = false;
+
+            // Replacement policy: direct-mapped.
+            // If the requester is about to replace a MODIFIED line (different tag),
+            // we must FLUSH it to main memory BEFORE granting the new request.
+            uint32_t req_idx = (bi->request.bus_addr >> 3) & 0x3F;
+            uint32_t req_tag = (bi->request.bus_addr >> 9) & 0xFFF;
+            TSRAM_Line *rline = &system_bus.cpu_cache[id]->tsram[req_idx];
+
+            if (rline->mesi_state == MESI_MODIFIED && rline->tag != req_tag) {
+                // Flush the old block (tag/index -> word address)
+                uint32_t old_block_addr = ((rline->tag & 0xFFF) << 9) | (req_idx << 3);
+                system_bus.busy = true;
+                system_bus.bus_orig_id = id;
+                system_bus.bus_cmd = BUS_FLUSH;
+                system_bus.bus_addr = old_block_addr;
+                system_bus.cooldown_timer = 0;
+                system_bus.word_offset = 0;
+                return;
+            }
             
-            // SNOOPING: Check for collisions
-            // bool flush_needed = false;
-            uint32_t tag = (bi->request.bus_addr >> 9) & 0xFFF;
-            uint32_t idx = (bi->request.bus_addr >> 3) & 0x3F;
+            // SNOOPING: other cores respond / invalidate
+            uint32_t tag = req_tag;
+            uint32_t idx = req_idx;
 
             for(int c = 0; c < CORE_COUNT; c++) {
                 if (c == id) continue; // Don't snoop self

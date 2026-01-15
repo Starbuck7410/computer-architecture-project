@@ -13,7 +13,7 @@
 #endif
 
 #define IMEM_DEPTH 1024
-#define MEMIN_DEPTH (1 << 20) // Reduced to 1MB for simulation speed/safety
+#define MEMIN_DEPTH (1 << 21) // 2^21 words (as defined in project spec)
 #define DSRAM_DEPTH 512 
 #define CACHE_BLOCK_SIZE 8
 #define REGISTER_COUNT 16 
@@ -27,7 +27,14 @@ typedef enum {
     OP_HALT = 20
 } Opcode;
 
-typedef enum { MESI_MODIFIED, MESI_EXCLUSIVE, MESI_SHARED, MESI_INVALID = 0 } MESI_State;
+// MESI encoding MUST match the project spec (TSRAM bits 13:12):
+// 0: Invalid, 1: Shared, 2: Exclusive, 3: Modified
+typedef enum {
+    MESI_INVALID = 0,
+    MESI_SHARED = 1,
+    MESI_EXCLUSIVE = 2,
+    MESI_MODIFIED = 3
+} MESI_State;
 typedef enum { BUS_NOCMD = 0, BUS_RD, BUS_RDX, BUS_FLUSH } BusCmd;
 
 // Instruction & Registers
@@ -103,6 +110,26 @@ typedef struct {
     int id;                 
     uint32_t pc;            
     int32_t regs[REGISTER_COUNT]; 
+
+    // Register write is committed on the clock edge (so reads in the same cycle
+    // see the old value, as required by the spec).
+    bool pending_reg_write;
+    uint8_t pending_reg_dst;
+    int32_t pending_reg_value;
+
+    // R1 holds the sign-extended immediate of the instruction currently in DECODE.
+    // We also commit it on the clock edge.
+    bool pending_imm_write;
+    int32_t pending_imm_value;
+
+    // Branch/jump with a single delay-slot: set redirect here in DECODE.
+    bool pc_redirect_valid;
+    uint32_t pc_redirect;
+
+    // After HALT is decoded we stop fetching new instructions, but we still
+    // let the pipeline drain.
+    bool stop_fetch;
+
     Pipeline pipe;
     Cache cache;
     CoreStats stats;
