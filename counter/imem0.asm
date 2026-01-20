@@ -1,7 +1,7 @@
 add $r2, $zero, $imm, 0      # Base addr = 0 
 add $r3, $zero, $imm, 0      # Core ID
 add $r4, $zero, $imm, 128    # Loop limit = 128
-add $r10, $zero, $imm, 4     # Jump target 
+add $r10, $zero, $imm, 4     # Jump target
 lw $r5, $r2, $imm, 1        
 bne $r10, $r5, $r3, 0       
 lw $r6, $r2, $imm, 0        

@@ -105,7 +105,6 @@ void decode_stage(Core * core){
     if (core->pipe.decode.active == 0) return;
 
     // Important: don't "stick" forever. Re-evaluate hazards every cycle.
-    // (The latching logic keeps the instruction in DECODE when stall==true.)
     core->pipe.decode.stall = false;
 
     Instruction * inst = &core->pipe.decode.inst;
@@ -121,7 +120,7 @@ void decode_stage(Core * core){
     inst->imm = imm12;
 
     // R0 is hard-wired to 0, and R1 is the sign-extended immediate of the
-    // instruction in DECODE (committed on the clock edge).
+    // instruction in DECODE
     core->pending_imm_write = true;
     core->pending_imm_value = inst->imm;
 
@@ -169,9 +168,6 @@ void decode_stage(Core * core){
             taken = true;
             break;
         default: break;
-    }
-    if(core->id == 0 && inst->opcode == OP_BLT){
-        printf("Taking jump?? %d, rs = %d, rt = %d\n", taken, rs_val, rt_val);
     }
     if (taken) {
         // Delay slot: the instruction currently in FETCH must still execute.
