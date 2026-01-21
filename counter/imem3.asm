@@ -4,6 +4,7 @@ add $r4, $zero, $imm, 128    # Loop limit = 128
 add $r10, $zero, $imm, 4     # Jump target 
 lw $r5, $r2, $imm, 1        
 bne $r10, $r5, $r3, 0       
+add $r0, $r0, $r0, 0
 lw $r6, $r2, $imm, 0        
 add $r6, $r6, $imm, 1        # Increment counter
 sw $r6, $r2, $imm, 0         # Store counter
