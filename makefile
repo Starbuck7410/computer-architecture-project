@@ -11,7 +11,9 @@ TARGET_SIM = test/simulator
 FLAGS = -Wall -Wextra
 DEBUG_FLAGS = -Wall -Wextra -g -O0 -DDEBUG
 
-simulator: clean $(SOURCES_SIM)
+all: $(TARGET_SIM)
+
+$(TARGET_SIM): clean $(SOURCES_SIM)
 	@echo Compiling files: $(SOURCE_SIM)
 	@gcc $(FLAGS) -o $(TARGET_SIM) $(SOURCE_SIM)
 
@@ -20,8 +22,6 @@ simulator-debug: clean $(SOURCES_SIM)
 	@gcc $(DEBUG_FLAGS) -o $(TARGET_SIM) $(SOURCE_SIM)
 	@./$(TARGET_SIM)
 
-simulator-run: simulator
-	@./$(TARGET_SIM)
 
 clean: 
 	@rm -f $(TARGET_SIM)

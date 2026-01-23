@@ -1,33 +1,35 @@
-add $r2, $zero, $imm, 0        # baseA = 0x000
-add $r4, $zero, $imm, 256      # baseB = 0x100
-add $r5, $zero, $imm, 512      # baseC = 0x200
-add $r3, $zero, $imm, 0        # core id
-sll $r6, $r3, $imm, 2          # i = coreid*4
-add $r7, $r6, $imm, 4          # i_end = i + 4
-add $r15, $zero, $imm, 9        # target I_LOOP (patched)
-add $r13, $zero, $imm, 10        # target J_LOOP (patched)
-add $r14, $zero, $imm, 12        # target K_LOOP (patched)
-add $r8, $zero, $imm, 0        # j = 0
-add $r10, $zero, $imm, 0       # sum = 0
-add $r9, $zero, $imm, 0        # k = 0
-sll $r12, $r6, $imm, 4         # row_off = i*16
-add $r11, $r2, $r12, 0         # tmp = baseA + row_off
-add $r11, $r11, $r9, 0         # tmp = A addr = baseA + i*16 + k
-lw  $r11, $r11, $imm, 0        # a = MEM[A addr]
-sll $r12, $r9, $imm, 4         # tmp2 = k*16
-add $r12, $r12, $r8, 0         # tmp2 = k*16 + j
-add $r12, $r12, $r4, 0         # B addr = baseB + k*16 + j
-lw  $r12, $r12, $imm, 0        # b = MEM[B addr]
-mul $r11, $r11, $r12, 0        # prod = a*b
-add $r10, $r10, $r11, 0        # sum += prod
-add $r9, $r9, $imm, 1          # k++
-blt $r14, $r9, $imm, 16        # if (k < 16) goto K_LOOP
-sll $r12, $r6, $imm, 4         # row_off = i*16
-add $r12, $r12, $r8, 0         # row_off + j
-add $r12, $r12, $r5, 0         # C addr = baseC + i*16 + j
-sw  $r10, $r12, $imm, 0        # MEM[C addr] = sum
-add $r8, $r8, $imm, 1          # j++
-blt $r13, $r8, $imm, 16        # if (j < 16) goto J_LOOP
-add $r6, $r6, $imm, 1          # i++
-blt $r15, $r6, $r7, 0          # if (i < i_end) goto I_LOOP
-halt $zero, $zero, $zero, 0
+                add $r5,  $r0, $r0, 0        # A base = 0x000
+                add $r6,  $r0, $r1, 0x100    # B base = 0x100
+                add $r7,  $r0, $r1, 0x200    # C base = 0x200
+                add $r13, $r0, $r1, 16       # N = 16
+                add $r2,  $r0, $r0, 0        # i = 0
+LOOP_I:         beq $r1, $r2, $r13, END
+                add $r3, $r0, $r0, 0         # j = 0
+LOOP_J:         beq $r1, $r3, $r13, NEXT_I
+                add $r4, $r0, $r0, 0         # k = 0
+                add $r8, $r0, $r0, 0         # sum = 0
+LOOP_K:         beq $r1, $r4, $r13, STORE_RESULT
+                sll $r9,  $r2, $r0, 6        # i * 64
+                sll $r10, $r4, $r0, 2        # k * 4
+                add $r9,  $r9, $r10, 0
+                add $r9,  $r9, $r5,  0
+                lw  $r10, $r9, $r0, 0
+                sll $r9,  $r4, $r0, 6        # k * 64
+                sll $r11, $r3, $r0, 2        # j * 4
+                add $r9,  $r9, $r11, 0
+                add $r9,  $r9, $r6,  0
+                lw  $r11, $r9, $r0, 0
+                mul $r12, $r10, $r11, 0
+                add $r8,  $r8,  $r12, 0
+                add $r4, $r4, $r1, 1
+                beq $r1, $r0, $r0, LOOP_K
+STORE_RESULT:   sll $r9,  $r2, $r0, 6        # i * 64
+                sll $r10, $r3, $r0, 2        # j * 4
+                add $r9,  $r9, $r10, 0
+                add $r9,  $r9, $r7,  0
+                sw  $r8,  $r9, $r0, 0
+                add $r3, $r3, $r1, 1
+                beq $r1, $r0, $r0, LOOP_J
+NEXT_I:         add $r2, $r2, $r1, 1
+                beq $r1, $r0, $r0, LOOP_I
+END:            halt $r0, $r0, $r0, 0

@@ -25,6 +25,7 @@ void bus_handler(){
         system_bus.bus_addr = 0;
         system_bus.bus_data = 0;
         system_bus.bus_shared = false;
+        system_bus.flush_post_state_valid = false;
     }
 
     // 1. ACTIVE TRANSACTION
@@ -72,8 +73,16 @@ void bus_handler(){
                 system_bus.cpu_cache[requester]->tsram[cache_idx].tag = (system_bus.bus_addr >> 9) & 0xFFF;
             } 
             else if (system_bus.bus_cmd == BUS_FLUSH) {
-                // Flushed block becomes Invalid (or Shared, but usually Invalid in MIPS sim)
-                system_bus.cpu_cache[requester]->tsram[cache_idx].mesi_state = MESI_INVALID;
+                // Apply the correct post-FLUSH MESI state.
+                // Eviction flush: INVALID
+                // Snoop flush on BUS_RD: SHARED (M->S)
+                // Snoop flush on BUS_RDX: INVALID (M->I)
+                MESI_State post = MESI_INVALID;
+                if (system_bus.flush_post_state_valid) {
+                    post = system_bus.flush_post_state;
+                }
+                system_bus.cpu_cache[requester]->tsram[cache_idx].mesi_state = post;
+                system_bus.flush_post_state_valid = false;
             }
 
             // Important: Only clear the pending flag if this was a requested op, not a forced snoop flush
@@ -109,7 +118,10 @@ void bus_handler(){
 
             if (rline->mesi_state == MESI_MODIFIED && rline->tag != req_tag) {
                 // Flush the old block (tag/index -> word address)
+                // This is an eviction flush: the line is being replaced, so it becomes INVALID.
                 uint32_t old_block_addr = ((rline->tag & 0xFFF) << 9) | (req_idx << 3);
+                system_bus.flush_post_state = MESI_INVALID;
+                system_bus.flush_post_state_valid = true;
                 system_bus.busy = true;
                 system_bus.bus_orig_id = id;
                 system_bus.bus_cmd = BUS_FLUSH;
@@ -130,8 +142,19 @@ void bus_handler(){
                 if (line->mesi_state != MESI_INVALID && line->tag == tag) {
                     system_bus.bus_shared = true; // Signal shared
 
+                    // MESI fix: if another core issues BUS_RD while we hold the line in EXCLUSIVE,
+                    // we must downgrade to SHARED.
+                    if (bi->request.bus_cmd == BUS_RD && line->mesi_state == MESI_EXCLUSIVE) {
+                        line->mesi_state = MESI_SHARED;
+                    }
+
                     if (line->mesi_state == MESI_MODIFIED) {
-                        // Found Modified line! Must FLUSH.
+                        // Found a MODIFIED line in another cache. Must FLUSH it so main memory is up-to-date.
+                        // Post-FLUSH state depends on requester cmd:
+                        // - BUS_RD  : M -> S
+                        // - BUS_RDX : M -> I
+                        system_bus.flush_post_state = (bi->request.bus_cmd == BUS_RD) ? MESI_SHARED : MESI_INVALID;
+                        system_bus.flush_post_state_valid = true;
                         system_bus.busy = true;
                         system_bus.bus_orig_id = c; // The flusher
                         system_bus.bus_cmd = BUS_FLUSH;

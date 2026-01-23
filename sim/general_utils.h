@@ -155,4 +155,11 @@ typedef struct {
     int word_offset;         
     int last_granted_device; 
     bool busy;               
+
+    // For BUS_FLUSH completion: what MESI state should the flusher keep?
+    // - Eviction flush: INVALID
+    // - Snoop flush on BUS_RD: SHARED (M->S)
+    // - Snoop flush on BUS_RDX: INVALID (M->I)
+    MESI_State flush_post_state;
+    bool flush_post_state_valid;
 } SystemBus;
