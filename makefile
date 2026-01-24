@@ -17,11 +17,6 @@ $(TARGET_SIM): clean $(SOURCES_SIM)
 	@echo Compiling files: $(SOURCE_SIM)
 	@gcc $(FLAGS) -o $(TARGET_SIM) $(SOURCE_SIM)
 
-simulator-debug: clean $(SOURCES_SIM)
-	@echo Compiling files with debug: $(SOURCE_SIM)
-	@gcc $(DEBUG_FLAGS) -o $(TARGET_SIM) $(SOURCE_SIM)
-	@./$(TARGET_SIM)
-
 
 clean: 
 	@rm -f $(TARGET_SIM)
@@ -31,4 +26,4 @@ clean-test:
 	@rm -f test/*trace.txt test/stats* test/*out* test/*ram*
 
 	
-.PHONY: clean simulator-run clean-test
+.PHONY: clean clean-test

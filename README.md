@@ -2,31 +2,33 @@
 The Computer Architecture project
 
 
-## TODO:
-
-### Step 1:
-- Design Structs, Enums, and overall architecture of the project
-- Copy and adapt assembler, simuator
-
-Amit - Implement `bus.c: send_bus_read_request()`, and add signature to `bus.h`\
-Daniel - Implement `pipeline.c: WB_stage()` [DONE]\
-Zohar - Implement `bus.c: invalidate_cache_block()`, and add signature to `bus.h` [DONE]\
-Shraga - Think about the memory control flow (`pipeline.c: memory_stage()`)
 
 
-## Code style conventions
+## Code Style Conventions
 
-### Variable, types, and constants
-- Variables will be named in `snake_case`
-- Types will be in `PascalCase`, when there are acronyms present they will be in caps with an underscore afterwards (For example `MESI_State`)
-- Constants will be in `ALL_CAPS` 
+### Naming
 
-### Functions and macros
-- Functions will be in `snake_case(...)`
-- Macros will be in `FULL_CAPS(...)` 
+#### Variables, Types, and Constants
+- Variables use `snake_case`.
+- Types use `snake_case_T`.
+  - The `_T` suffix explicitly marks a type.
+  - We avoid `_t` to prevent conflicts with GNU library types.
+  - Acronyms inside type names are written in uppercase and followed by an underscore.
+    - Example: `mesi_state_T`
+- Constants use `ALL_CAPS`.
 
-### Files and directories
-- Files and directories will be in `snake_case`
-- All relevant files will be lazily tossed in the same directory, `sim` for simulator, `asm` for assembler and `prog` for assembly files
-- The makefile will be outside of these directories, with recipes that target the different directories
+#### Functions and Macros
+- Functions use `snake_case(...)`.
+  - Acronyms in function names remain lowercase.
+- Macros use `FULL_CAPS(...)`.
 
+---
+
+### Files and Project Layout
+
+- Files and directories use `kebab-case`.
+- All relevant source files are placed directly in a single directory:
+  - `sim/` contains the simulator source files.
+  - Assembly files are located in a directory named after the corresponding program.
+- The `makefile` is located outside these directories.
+  - The `all` target builds the simulator binary and places the result in the `test/` directory.
