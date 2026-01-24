@@ -39,5 +39,13 @@ STORE_RESULT:   sll $r9,  $r2, $r1, 4        # i * 16
 NEXT_I:         add $r2, $r2, $r1, 1
                 beq $r1, $r0, $r0, LOOP_I
                 add $r0, $r0, $r0, 0         # Delay slot NOP
-END:            lw  $r0, $r0, $r1, 0x4FF     # Flush cache to main memory
+END:            add $r9,  $r0, $r1, 0x400    # evict_addr = 0x400
+                add $r10, $r0, $r1, 0x500    # evict_end  = 0x500 (exclusive)
+EVICT_LOOP:     beq $r1, $r9, $r10, AFTER_EVICT
+                add $r0, $r0, $r0, 0         # delay slot
+                lw  $r0, $r9, $r0, 0         # touch address -> evict corresponding C line
+                add $r9, $r9, $r1, 1         # evict_addr++
+                beq $r1, $r0, $r0, EVICT_LOOP
+                add $r0, $r0, $r0, 0         # delay slot
+AFTER_EVICT:    lw  $r0, $r0, $r1, 0x4FF     # (keep project convention flush read)
                 halt $r0, $r0, $r0, 0
