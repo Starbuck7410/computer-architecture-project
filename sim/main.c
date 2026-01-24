@@ -1,18 +1,18 @@
-#include "general_utils.h"
-#include "file_io.h"
+#include "general-utils.h"
+#include "file-io.h"
 #include "pipeline.h"
 #include "bus.h"
 #include <stdlib.h>
 
-SystemBus system_bus;
+bus_T system_bus;
 
-static bool pipeline_empty(const Core* c) {
+static bool pipeline_empty(const core_T * c) {
     return !c->pipe.fetch.active && !c->pipe.decode.active && !c->pipe.execute.active &&
-           !c->pipe.mem.active && !c->pipe.wb.active;
+           !c->pipe.memory.active && !c->pipe.writeback.active;
 }
 
 // Commit register writes on the clock edge (end of cycle)
-static void commit_register_writes(Core* c) {
+static void commit_register_writes(core_T * c) {
     if (c == NULL) return;
 
     // R0 is hard-wired to 0
@@ -38,18 +38,18 @@ static void commit_register_writes(Core* c) {
 }
 
 // Helper to advance pipeline stages (latching)
-void update_pipeline_stages(Core * core) {
+void update_pipeline_stages(core_T * core) {
     if (core == NULL) return;
 
-    // Pipeline register update happens on the clock edge.
+    // pipeline_T register update happens on the clock edge.
     // Use temporaries so we don't accidentally reuse the same instruction twice.
-    PipelineStage next_wb     = core->pipe.wb;
-    PipelineStage next_mem    = core->pipe.mem;
-    PipelineStage next_exec   = core->pipe.execute;
-    PipelineStage next_decode = core->pipe.decode;
-    PipelineStage next_fetch  = core->pipe.fetch;
+    pipeline_stage_T next_wb     = core->pipe.writeback;
+    pipeline_stage_T next_mem    = core->pipe.memory;
+    pipeline_stage_T next_exec   = core->pipe.execute;
+    pipeline_stage_T next_decode = core->pipe.decode;
+    pipeline_stage_T next_fetch  = core->pipe.fetch;
 
-    if (core->pipe.mem.stall) {
+    if (core->pipe.memory.stall) {
         // Whole pipeline is effectively stalled behind MEM while waiting on the bus.
         // Nothing advances this cycle (except we count the stall).
         core->stats.mem_stall++;
@@ -57,7 +57,7 @@ void update_pipeline_stages(Core * core) {
     }
 
     // WB always takes MEM, MEM takes EXEC.
-    next_wb  = core->pipe.mem;
+    next_wb  = core->pipe.memory;
     next_mem = core->pipe.execute;
 
     if (core->pipe.decode.stall) {
@@ -69,29 +69,29 @@ void update_pipeline_stages(Core * core) {
         next_decode = core->pipe.fetch;
 
         // Critical: once FETCH is consumed into DECODE, clear FETCH so we don't
-        // "re-inject" the same instruction if fetch_stage() is blocked next cycle.
+        // "re-inject" the same instruction if fetch() is blocked next cycle.
         next_fetch.active = false;
     }
 
-    core->pipe.wb     = next_wb;
-    core->pipe.mem    = next_mem;
+    core->pipe.writeback     = next_wb;
+    core->pipe.memory    = next_mem;
     core->pipe.execute= next_exec;
     core->pipe.decode = next_decode;
     core->pipe.fetch  = next_fetch;
 }
 
 int main(int argc, char ** argv){
-    SimFiles sim_files;
+    files_T sim_files;
     get_arguments(argc, argv, &sim_files);
 
-    // 1. Initialize System Memory
+    // Initialize System Memory
     system_bus.system_memory = (uint32_t*)calloc(MEMIN_DEPTH, sizeof(uint32_t));
-    read_mainmem(&sim_files, system_bus.system_memory);
+    system_bus.max_memory_accessed = read_mainmem(&sim_files, system_bus.system_memory);
 
-    // 2. Initialize Cores
-    Core * cores[CORE_COUNT];
+    // Initialize Cores
+    core_T * cores[CORE_COUNT];
     for(int i = 0; i < CORE_COUNT; i++) {
-        cores[i] = (Core*)calloc(1, sizeof(Core));
+        cores[i] = (core_T *)calloc(1, sizeof(core_T));
         cores[i]->id = i;
         cores[i]->pc = 0;
         system_bus.bus_interface[i] = &cores[i]->bus_interface;
@@ -104,7 +104,7 @@ int main(int argc, char ** argv){
 
     // Truncate per-cycle trace outputs (we append during the run)
     {
-        FILE *fp = fopen(sim_files.bustrace, "w");
+        file_T *fp = fopen(sim_files.bustrace, "w");
         if (fp) fclose(fp);
         for (int i = 0; i < CORE_COUNT; i++) {
             fp = fopen(sim_files.trace[i], "w");
@@ -118,7 +118,7 @@ int main(int argc, char ** argv){
     while(active){
         bool all_done = true;
 
-        // 1. Run Pipeline Stages (Hardware Parallelism)
+        // Run pipeline_T Stages (Hardware Parallelism)
         for(int i = 0; i < CORE_COUNT; i++){
             // Run stages while there is still pipeline activity to drain.
             if(!cores[i]->halted || !pipeline_empty(cores[i])) {
@@ -128,24 +128,24 @@ int main(int argc, char ** argv){
                 // data racing within the cycle, but here we use a latching 
                 // function at the end, so order matters less, except for forwarding.
                 
-                writeback_stage(cores[i]);
-                memory_stage(cores[i]);
-                execute_stage(cores[i]);
-                decode_stage(cores[i]);
-                fetch_stage(cores[i]);
+                writeback(cores[i]);
+                memory(cores[i]);
+                execute(cores[i]);
+                decode(cores[i]);
+                fetch(cores[i]);
             }
         }
 
         if(all_done) break;
 
-        // 2. Bus Arbitration & Transaction
+        // Bus Arbitration & Transaction
         bus_handler();
 
-        // 3. Logging
+        // Logging
         log_core_trace(&sim_files, cores, cycle);
         log_bus_trace(&sim_files, cycle);
 
-        // 4. Advance Pipeline (Clock Edge)
+        // Advance pipeline_T (Clock Edge)
         for(int i = 0; i < CORE_COUNT; i++){
             // Clock edge: advance pipeline, then commit register file updates.
             update_pipeline_stages(cores[i]);

@@ -1,6 +1,6 @@
-#include "file_io.h"
+#include "file-io.h"
 
-void get_arguments(int argc, char* argv[], SimFiles* files) {
+void get_arguments(int argc, char* argv[], files_T* files) {
     // defaults
     if (argc < 28) {
         files->imem[0] = "imem0.txt";
@@ -47,46 +47,50 @@ void get_arguments(int argc, char* argv[], SimFiles* files) {
 }
 
 // Read imem[i] into struct
-void read_imem(SimFiles* files, Core* core[CORE_COUNT]) {
-    FILE* file;
+void read_imem(files_T* files, core_T* core[CORE_COUNT]) {
+    file_T* file;
 
     for (int i = 0; i < CORE_COUNT; i++) {
         memset(core[i]->imem, 0, sizeof(core[i]->imem));
         file = fopen(files->imem[i], "r");
         if (file) {
             for (int addr = 0; addr < IMEM_DEPTH; addr++) {
-                if (fscanf(file, "%08x", &core[i]->imem[addr]) == EOF) {
+                if (fscanf(file, "%08X", &core[i]->imem[addr]) == EOF) {
                     break;
                 }
             }
             fclose(file);
+        }else{
+            perror("read_imem()");
+            exit(1);
         }
     }
 }
 
-// Read main mem
-void read_mainmem(SimFiles* files, uint32_t* main_memory) {
-    FILE* file;
-
+// Read main memory
+uint32_t read_mainmem(files_T* files, uint32_t* main_memory) {
+    file_T* file;
+    int addr = 0;
     memset(main_memory, 0, MEMIN_DEPTH * sizeof(uint32_t));
     file = fopen(files->memin, "r");
     if (file) {
-        int addr = 0;
-        while (fscanf(file, "%08x", &main_memory[addr]) != EOF && addr < MEMIN_DEPTH) {
+        
+        while (fscanf(file, "%08X", &main_memory[addr]) != EOF && addr < MEMIN_DEPTH) {
             addr++;
         }
         fclose(file);
     }
+    return addr;
 }
 
 // Write outputs files once at the end of main loop
-void write_outputs(SimFiles* files, Core* cores[CORE_COUNT], uint32_t* main_memory) {
-    FILE* file;
+void write_outputs(files_T* files, core_T* cores[CORE_COUNT], uint32_t* main_memory) {
+    file_T* file;
 
     // memout: write the full main memory image (2^21 words)
     file = fopen(files->memout, "w");
     if (!file) goto file_error;
-    for (int i = 0; i < MEMIN_DEPTH; i++) {
+    for (uint32_t i = 0; i < system_bus.max_memory_accessed; i++) {
         fprintf(file, "%08X\n", main_memory[i]);
     }
     fclose(file);
@@ -142,14 +146,14 @@ void write_outputs(SimFiles* files, Core* cores[CORE_COUNT], uint32_t* main_memo
 }
 
 // Write outputs each clock cycle (main loop iteration)
-void log_bus_trace(SimFiles* files, int cycle) {
+void log_bus_trace(files_T* files, int cycle) {
     if (system_bus.bus_cmd == BUS_NOCMD) return;
 
-    FILE* fp = fopen(files->bustrace, "a");
+    file_T* fp = fopen(files->bustrace, "a");
     if (fp) {
         fprintf(fp, "%d %X %X %06X %08X %X\n", 
             cycle, 
-            system_bus.bus_orig_id, 
+            system_bus.bus_origin_id, 
             system_bus.bus_cmd, 
             system_bus.bus_addr & 0xFFFFF, 
             system_bus.bus_data, 
@@ -159,17 +163,17 @@ void log_bus_trace(SimFiles* files, int cycle) {
 }
 
 
-void log_core_trace(SimFiles* files, Core* cores[CORE_COUNT], int cycle) {
+void log_core_trace(files_T* files, core_T* cores[CORE_COUNT], int cycle) {
     for (int i = 0; i < CORE_COUNT; i++) {
         // Print as long as at least one pipeline stage is active.
         if (cores[i]->halted &&
             !cores[i]->pipe.fetch.active && !cores[i]->pipe.decode.active &&
-            !cores[i]->pipe.execute.active && !cores[i]->pipe.mem.active &&
-            !cores[i]->pipe.wb.active) {
+            !cores[i]->pipe.execute.active && !cores[i]->pipe.memory.active &&
+            !cores[i]->pipe.writeback.active) {
             continue;
         }
 
-        FILE* fp = fopen(files->trace[i], "a");
+        file_T* fp = fopen(files->trace[i], "a");
         if (fp) {
             fprintf(fp, "%d ", cycle);
 
@@ -186,11 +190,11 @@ void log_core_trace(SimFiles* files, Core* cores[CORE_COUNT], int cycle) {
             else fprintf(fp, "--- ");
 
             // MEM
-            if (cores[i]->pipe.mem.active) fprintf(fp, "%03X ", cores[i]->pipe.mem.pc);
+            if (cores[i]->pipe.memory.active) fprintf(fp, "%03X ", cores[i]->pipe.memory.pc);
             else fprintf(fp, "--- ");
 
             // WB
-            if (cores[i]->pipe.wb.active) fprintf(fp, "%03X ", cores[i]->pipe.wb.pc);
+            if (cores[i]->pipe.writeback.active) fprintf(fp, "%03X ", cores[i]->pipe.writeback.pc);
             else fprintf(fp, "--- ");
 
             // Registers R2-R15

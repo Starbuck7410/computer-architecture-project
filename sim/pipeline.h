@@ -1,9 +1,9 @@
 #pragma once
-#include "general_utils.h"
+#include "general-utils.h"
 
 
-void fetch_stage(Core * core);
-void decode_stage(Core * core);
-void execute_stage(Core * core);
-void memory_stage(Core * core);
-void writeback_stage(Core* core);
+void fetch(core_T * core);
+void decode(core_T * core);
+void execute(core_T * core);
+void memory(core_T * core);
+void writeback(core_T * core);

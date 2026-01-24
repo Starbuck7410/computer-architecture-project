@@ -1,16 +1,16 @@
 #include "bus.h"
 
-void init_bus(Core * core[CORE_COUNT]){
+void init_bus(core_T * core[CORE_COUNT]){
     for(int i = 0; i < CORE_COUNT; i++){
         system_bus.cpu_cache[i] = &(core[i]->cache);
         system_bus.bus_interface[i] = &(core[i]->bus_interface);
     }
 }
 
-void send_bus_read_request(Core * core, uint32_t address, bool exclusive){
+void send_bus_read_request(core_T * core, uint32_t address, bool exclusive){
     if (core->bus_interface.has_pending_request) return;
 
-    core->bus_interface.request.bus_orig_id = core->id;
+    core->bus_interface.request.bus_origin_id = core->id;
     core->bus_interface.request.bus_addr = address;
     core->bus_interface.request.bus_cmd = exclusive ? BUS_RDX : BUS_RD;
     core->bus_interface.has_pending_request = true;
@@ -21,14 +21,14 @@ void bus_handler(){
     // Reset bus wire if idle
     if (!system_bus.busy) {
         system_bus.bus_cmd = BUS_NOCMD;
-        system_bus.bus_orig_id = 0;
+        system_bus.bus_origin_id = 0;
         system_bus.bus_addr = 0;
         system_bus.bus_data = 0;
         system_bus.bus_shared = false;
         system_bus.flush_post_state_valid = false;
     }
 
-    // 1. ACTIVE TRANSACTION
+    // Active transaction
     if (system_bus.busy) {
         // Cooldown for latency
         if (system_bus.cooldown_timer > 0) {
@@ -37,24 +37,28 @@ void bus_handler(){
         }
 
         // Processing Transfer
-        int requester = system_bus.bus_orig_id;
+        int requester = system_bus.bus_origin_id;
         int cache_idx = (system_bus.bus_addr >> 3) & 0x3F;
         
         // Align address to the start of the block (Critical Fix)
-        // System is Word Addressed. Block is 8 words. Mask last 3 bits.
+        // Assuming CACHE_BLOCK_SIZE is a power of 2 for convenience
         uint32_t mem_block_addr = system_bus.bus_addr & ~(CACHE_BLOCK_SIZE - 1); 
-        
+        uint32_t mem_physical_addr = mem_block_addr + system_bus.word_offset;
+
         if (system_bus.bus_cmd == BUS_RD || system_bus.bus_cmd == BUS_RDX) {
-            // Read from Main Memory -> Bus -> Cache
-            uint32_t data = system_bus.system_memory[mem_block_addr + system_bus.word_offset];
+            // Read from Main Memory -> Bus -> cache_T
+            
+            uint32_t data = system_bus.system_memory[mem_physical_addr];
+            system_bus.max_memory_accessed = (mem_physical_addr > system_bus.max_memory_accessed) ? mem_physical_addr : system_bus.max_memory_accessed;
             system_bus.bus_data = data;
             system_bus.cpu_cache[requester]->dsram[cache_idx].word[system_bus.word_offset] = data;
         
         } else if (system_bus.bus_cmd == BUS_FLUSH) {
-            // Write from Cache -> Bus -> Main Memory
+            // Write from cache_T -> Bus -> Main Memory
             uint32_t data = system_bus.cpu_cache[requester]->dsram[cache_idx].word[system_bus.word_offset];
             system_bus.bus_data = data;
-            system_bus.system_memory[mem_block_addr + system_bus.word_offset] = data;
+            system_bus.system_memory[mem_physical_addr] = data;
+            system_bus.max_memory_accessed = (mem_physical_addr > system_bus.max_memory_accessed) ? mem_physical_addr : system_bus.max_memory_accessed;
         }
 
         system_bus.word_offset++;
@@ -64,7 +68,7 @@ void bus_handler(){
             
             // Update MESI States
             if (system_bus.bus_cmd == BUS_RD) {
-                MESI_State new_state = system_bus.bus_shared ? MESI_SHARED : MESI_EXCLUSIVE;
+                mesi_state_T new_state = system_bus.bus_shared ? MESI_SHARED : MESI_EXCLUSIVE;
                 system_bus.cpu_cache[requester]->tsram[cache_idx].mesi_state = new_state;
                 system_bus.cpu_cache[requester]->tsram[cache_idx].tag = (system_bus.bus_addr >> 9) & 0xFFF;
             } 
@@ -77,7 +81,7 @@ void bus_handler(){
                 // Eviction flush: INVALID
                 // Snoop flush on BUS_RD: SHARED (M->S)
                 // Snoop flush on BUS_RDX: INVALID (M->I)
-                MESI_State post = MESI_INVALID;
+                mesi_state_T post = MESI_INVALID;
                 if (system_bus.flush_post_state_valid) {
                     post = system_bus.flush_post_state;
                 }
@@ -98,11 +102,11 @@ void bus_handler(){
         return;
     }
 
-    // 2. ARBITRATION
+    // Arbitration
     int start = (system_bus.last_granted_device + 1) % CORE_COUNT;
     for (int i = 0; i < CORE_COUNT; i++) {
         int id = (start + i) % CORE_COUNT;
-        BusInterface *bi = system_bus.bus_interface[id];
+        bus_interface_T *bi = system_bus.bus_interface[id];
 
         if (bi->has_pending_request && !bi->request_done) {
 
@@ -114,7 +118,7 @@ void bus_handler(){
             // we must FLUSH it to main memory BEFORE granting the new request.
             uint32_t req_idx = (bi->request.bus_addr >> 3) & 0x3F;
             uint32_t req_tag = (bi->request.bus_addr >> 9) & 0xFFF;
-            TSRAM_Line *rline = &system_bus.cpu_cache[id]->tsram[req_idx];
+            tsram_line_T *rline = &system_bus.cpu_cache[id]->tsram[req_idx];
 
             if (rline->mesi_state == MESI_MODIFIED && rline->tag != req_tag) {
                 // Flush the old block (tag/index -> word address)
@@ -123,7 +127,7 @@ void bus_handler(){
                 system_bus.flush_post_state = MESI_INVALID;
                 system_bus.flush_post_state_valid = true;
                 system_bus.busy = true;
-                system_bus.bus_orig_id = id;
+                system_bus.bus_origin_id = id;
                 system_bus.bus_cmd = BUS_FLUSH;
                 system_bus.bus_addr = old_block_addr;
                 system_bus.cooldown_timer = 0;
@@ -131,14 +135,14 @@ void bus_handler(){
                 return;
             }
             
-            // SNOOPING: other cores respond / invalidate
+            // Snooping: other cores respond / invalidate
             uint32_t tag = req_tag;
             uint32_t idx = req_idx;
 
             for(int c = 0; c < CORE_COUNT; c++) {
                 if (c == id) continue; // Don't snoop self
                 
-                TSRAM_Line *line = &system_bus.cpu_cache[c]->tsram[idx];
+                tsram_line_T *line = &system_bus.cpu_cache[c]->tsram[idx];
                 if (line->mesi_state != MESI_INVALID && line->tag == tag) {
                     system_bus.bus_shared = true; // Signal shared
 
@@ -156,7 +160,7 @@ void bus_handler(){
                         system_bus.flush_post_state = (bi->request.bus_cmd == BUS_RD) ? MESI_SHARED : MESI_INVALID;
                         system_bus.flush_post_state_valid = true;
                         system_bus.busy = true;
-                        system_bus.bus_orig_id = c; // The flusher
+                        system_bus.bus_origin_id = c; // The flusher
                         system_bus.bus_cmd = BUS_FLUSH;
                         system_bus.bus_addr = bi->request.bus_addr;
                         system_bus.cooldown_timer = 0; 
@@ -172,7 +176,7 @@ void bus_handler(){
 
             // Grant Bus
             system_bus.busy = true;
-            system_bus.bus_orig_id = id;
+            system_bus.bus_origin_id = id;
             system_bus.bus_cmd = bi->request.bus_cmd;
             system_bus.bus_addr = bi->request.bus_addr;
             system_bus.cooldown_timer = BUS_DELAY;

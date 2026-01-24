@@ -22,10 +22,10 @@
 #define BUS_DELAY 16
 
 typedef enum {
-    OP_ADD = 0, OP_SUB, OP_AND, OP_OR, OP_XOR, OP_MUL, OP_SLL, OP_SRA, OP_SRL,
-    OP_BEQ, OP_BNE, OP_BLT, OP_BGT, OP_BLE, OP_BGE, OP_JAL, OP_LW, OP_SW,
-    OP_HALT = 20
-} Opcode;
+    OPCODE_ADD = 0, OPCODE_SUB, OPCODE_AND, OPCODE_OR, OPCODE_XOR, OPCODE_MUL, OPCODE_SLL, OPCODE_SRA, OPCODE_SRL,
+    OPCODE_BEQ, OPCODE_BNE, OPCODE_BLT, OPCODE_BGT, OPCODE_BLE, OPCODE_BGE, OPCODE_JAL, OPCODE_LW, OPCODE_SW,
+    OPCODE_HALT = 20
+} opcode_T;
 
 // MESI encoding MUST match the project spec (TSRAM bits 13:12):
 // 0: Invalid, 1: Shared, 2: Exclusive, 3: Modified
@@ -34,50 +34,50 @@ typedef enum {
     MESI_SHARED = 1,
     MESI_EXCLUSIVE = 2,
     MESI_MODIFIED = 3
-} MESI_State;
-typedef enum { BUS_NOCMD = 0, BUS_RD, BUS_RDX, BUS_FLUSH } BusCmd;
+} mesi_state_T;
+typedef enum { BUS_NOCMD = 0, BUS_RD, BUS_RDX, BUS_FLUSH } bus_cmd_T;
 
-// Instruction & Registers
+// instruction_T & Registers
 typedef struct {
     uint32_t binary_value; 
-    Opcode opcode;        
+    opcode_T opcode;        
     uint8_t rd;            
     uint8_t rs;            
     uint8_t rt;            
     int32_t imm;           
-} Instruction;
+} instruction_T; // We REAALLLY wanted to use bit-fields here but damn you undefined behaviour
 
-// Pipeline
+// pipeline_T
 typedef struct {
     uint32_t pc;            
-    Instruction inst;       
+    instruction_T instruction;       
     int32_t result;        
     bool active;            
     bool stall; // Helper to prevent stage from advancing
-} PipelineStage;
+} pipeline_stage_T;
 
 typedef struct {
-    PipelineStage fetch;
-    PipelineStage decode;
-    PipelineStage execute;
-    PipelineStage mem;
-    PipelineStage wb;
-} Pipeline;
+    pipeline_stage_T fetch;
+    pipeline_stage_T decode;
+    pipeline_stage_T execute;
+    pipeline_stage_T memory;
+    pipeline_stage_T writeback;
+} pipeline_T;
 
-// Memory & Cache
+// Memory & cache_T
 typedef struct {
     uint32_t tag;   
-    MESI_State mesi_state; 
-} TSRAM_Line;
+    mesi_state_T mesi_state; 
+} tsram_line_T;
 
 typedef struct {
     uint32_t word[CACHE_BLOCK_SIZE];
-} DSRAM_Line;
+} dsram_line_T;
 
 typedef struct {
-    DSRAM_Line dsram[TSRAM_DEPTH];     
-    TSRAM_Line tsram[TSRAM_DEPTH];   
-} Cache;
+    dsram_line_T dsram[TSRAM_DEPTH];     
+    tsram_line_T tsram[TSRAM_DEPTH];   
+} cache_T;
 
 // Status
 typedef struct {
@@ -89,21 +89,21 @@ typedef struct {
     int write_misses;
     int decode_stall; 
     int mem_stall;    
-} CoreStats;
+} core_stats_T;
 
 // Bus Structures
 typedef struct {
-    int bus_orig_id;      
-    BusCmd bus_cmd;         
+    int bus_origin_id;      
+    bus_cmd_T bus_cmd;         
     uint32_t bus_addr;   
     uint32_t bus_data;   
-} BusRequest;
+} bus_request_T;
 
 typedef struct {
     bool has_pending_request;
-    BusRequest request;
+    bus_request_T request;
     bool request_done; // Flag set by bus when operation completes
-} BusInterface;
+} bus_interface_T;
 
 // Main core
 typedef struct {
@@ -130,22 +130,23 @@ typedef struct {
     // let the pipeline drain.
     bool stop_fetch;
 
-    Pipeline pipe;
-    Cache cache;
-    CoreStats stats;
-    BusInterface bus_interface; // Private interface
+    pipeline_T pipe;
+    cache_T cache;
+    core_stats_T stats;
+    bus_interface_T bus_interface; // Private interface
     uint32_t imem[IMEM_DEPTH]; 
     bool halted;            
-} Core;
+} core_T;
 
 typedef struct {
-    Cache * cpu_cache[CORE_COUNT];
-    BusInterface * bus_interface[CORE_COUNT]; // Pointers to core interfaces
-    uint32_t * system_memory; // Changed to uint32_t ptr
+    cache_T * cpu_cache[CORE_COUNT];
+    bus_interface_T * bus_interface[CORE_COUNT]; // Pointers to core interfaces
+    uint32_t * system_memory; 
+    uint32_t max_memory_accessed;      // Max item written to memory
 
     // Current State of the Bus Wire
-    int bus_orig_id;
-    BusCmd bus_cmd;
+    int bus_origin_id;
+    bus_cmd_T bus_cmd;
     uint32_t bus_addr;
     uint32_t bus_data;
     bool bus_shared; 
@@ -160,6 +161,6 @@ typedef struct {
     // - Eviction flush: INVALID
     // - Snoop flush on BUS_RD: SHARED (M->S)
     // - Snoop flush on BUS_RDX: INVALID (M->I)
-    MESI_State flush_post_state;
+    mesi_state_T flush_post_state;
     bool flush_post_state_valid;
-} SystemBus;
+} bus_T;

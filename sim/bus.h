@@ -1,8 +1,8 @@
 #pragma once
-#include "general_utils.h"
+#include "general-utils.h"
 
-extern SystemBus system_bus;
+extern bus_T system_bus;
 
-void send_bus_read_request(Core* core, uint32_t address, bool exclusive);
-void init_bus(Core * core[CORE_COUNT]);
+void send_bus_read_request(core_T* core, uint32_t address, bool exclusive);
+void init_bus(core_T * core[CORE_COUNT]);
 void bus_handler();
